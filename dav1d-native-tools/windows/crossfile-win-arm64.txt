@@ -1,0 +1,40 @@
+# =============================================================================================
+# crossfile-win-arm64.txt - meson cross file for building win-arm64 ON AN x64 WINDOWS HOST
+# =============================================================================================
+#
+#   >>> UNVERIFIED. Written on Linux, 2026-08-28; never run. <<<
+#
+# ONLY needed for the cross route:  .\build-win-arm64.ps1 -Route CrossFromX64
+# The native route (running on an ARM64 Windows machine) needs no cross file at all - meson
+# detects the target from the compiler - and is the route to prefer, because it can also RUN the
+# gate: the smoke test and the conformance decode need to execute ARM64 binaries.
+#
+# WHY clang-cl AND NOT cl
+#   dav1d's AArch64 assembly is GNU-assembler syntax. With MSVC's cl, meson has to route it
+#   through gas-preprocessor.pl + armasm64, which drags in Perl and an extra script from outside
+#   this repository - exactly what this tooling exists to avoid. clang-cl assembles those .S
+#   files directly, and dav1d's meson.build knows it (the use_gaspp condition in meson.build
+#   excludes clang-cl for meson >= 0.58). So: clang-cl, from Visual Studio's "C++ Clang tools
+#   for Windows" component.
+#
+# Run vcvarsall.bat x64_arm64 BEFORE using this file, so the ARM64 Windows SDK libraries and the
+# linker are on PATH; this file only says which compiler to invoke and what to target.
+# =============================================================================================
+
+[binaries]
+c = 'clang-cl'
+cpp = 'clang-cl'
+ar = 'llvm-lib'
+strip = 'llvm-strip'
+
+[host_machine]
+system = 'windows'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'
+
+[built-in options]
+c_args = ['--target=arm64-pc-windows-msvc']
+cpp_args = ['--target=arm64-pc-windows-msvc']
+c_link_args = ['--target=arm64-pc-windows-msvc']
+cpp_link_args = ['--target=arm64-pc-windows-msvc']

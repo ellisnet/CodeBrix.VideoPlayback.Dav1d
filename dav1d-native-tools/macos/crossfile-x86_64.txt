@@ -1,0 +1,34 @@
+# =============================================================================================
+# crossfile-x86_64.txt - meson cross file: build the osx-x64 slice on an Apple Silicon Mac
+# =============================================================================================
+#
+#   >>> UNVERIFIED. Written on Linux, 2026-08-28; never run on macOS. <<<
+#
+# Used by build-osx-x64.sh. Apple's clang is a cross compiler by nature - `-arch x86_64` is all
+# it takes - so this file exists only to tell meson that the HOST machine (the machine the built
+# code runs on) is x86_64, which is what makes meson select dav1d's x86 assembly paths and look
+# for nasm. Without it meson would configure an arm64 build with a confusing -arch flag bolted
+# on, and dav1d's x86 SIMD would never be assembled.
+#
+# An Intel Mac is not needed. One Apple Silicon machine produces both slices - as two separate
+# dylibs in two separate RID folders, deliberately NOT a universal binary: the package's
+# runtimes/osx-x64/ and runtimes/osx-arm64/ folders each want their own file, and a fat binary
+# would put both slices in both places.
+#
+# nasm must be installed (brew install nasm) for this slice, exactly as on Linux x64.
+# =============================================================================================
+
+[binaries]
+c = ['clang', '-arch', 'x86_64']
+cpp = ['clang++', '-arch', 'x86_64']
+objc = ['clang', '-arch', 'x86_64']
+ar = 'ar'
+strip = 'strip'
+nasm = 'nasm'
+
+[host_machine]
+system = 'darwin'
+kernel = 'xnu'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'

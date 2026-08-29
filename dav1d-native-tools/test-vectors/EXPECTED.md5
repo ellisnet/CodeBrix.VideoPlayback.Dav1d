@@ -1,0 +1,54 @@
+# ==============================================================================
+# EXPECTED.md5 - the decode hashes the conformance gate checks against
+# ==============================================================================
+#
+# FORMAT (pipe-separated, one decode per line, '#' starts a comment):
+#
+#     <vector file name>|<dav1d CLI flags>|<expected md5>
+#
+# The gate in linux/container-build.sh (and its Windows and macOS equivalents)
+# runs, for every line:
+#
+#     dav1d -i test-vectors/<file> --muxer md5 -o - <flags>
+#
+# and requires the printed hash to equal the third field. dav1d's md5 muxer
+# hashes the decoded frames themselves - every plane, row by row, Y then U then
+# V, 16-bit words little-endian for high bit depth, no stride padding - so these
+# hashes are a statement about the DECODED PICTURES, not about the file.
+#
+# WHY --filmgrain IS ON EVERY LINE
+# The dav1d CLI applies film grain by default EXCEPT when the muxer is md5 or
+# xxh3, where it defaults to off. Relying on that default would make the gate
+# depend on a CLI convention rather than on a stated intention, so every line
+# says what it wants. Only vector 05 carries grain metadata, so on the other
+# five the flag makes no difference - and the pair of lines for 05 proves that.
+#
+# HOW THESE VALUES WERE ESTABLISHED (2026-08-28), BY TWO INDEPENDENT DECODERS
+#   1. the dav1d CLI built from the vendored source by linux/build.sh (x64,
+#      MODE=generate-expected), and
+#   2. ffmpeg 7.1.5's own decoders, twice - once through libdav1d and once
+#      through libaom-av1, which is a completely separate implementation:
+#          ffmpeg -v error -c:v libdav1d   -i <vec> -pix_fmt <fmt> -f md5 -
+#          ffmpeg -v error -c:v libaom-av1 -i <vec> -pix_fmt <fmt> -f md5 -
+#
+# All three agreed, byte for byte, on all six streams: the two md5 conventions
+# turn out to hash exactly the same bytes, so ONE hash per stream serves as both
+# the expected value and the cross-decoder check. (ffmpeg applies film grain by
+# default, which is why its hashes match the --filmgrain 1 lines.)
+#
+# See README.txt in this folder for the provenance of the streams themselves and
+# for how to regenerate these values.
+# ==============================================================================
+
+01-8bit-420-aom.ivf|--filmgrain 1|eacbb8abacc8bd95f290ee94e4b7fd8e
+02-8bit-420-svtav1.ivf|--filmgrain 1|c38ed6ef9568f89ebe677590f8d9f8bc
+03-10bit-420-aom.ivf|--filmgrain 1|76fdc38759ef4d1f863be100c49f8d7f
+04-8bit-444-aom.ivf|--filmgrain 1|3fa9cbeae219dd519d44756ce44aaeb9
+05-8bit-420-filmgrain-svtav1.ivf|--filmgrain 1|3d35ef826623fc31dfb7af5403833617
+
+# The same stream with grain synthesis switched OFF. It is here so the gate
+# proves that film grain is really being applied on the line above rather than
+# quietly skipped: these two hashes MUST differ, and both must match.
+05-8bit-420-filmgrain-svtav1.ivf|--filmgrain 0|c716ab1237c27b99976580065b7a4bd8
+
+06-8bit-420-oddsize-keyframes-aom.ivf|--filmgrain 1|7d37c280ac0bd5dd758d1397663b4d28

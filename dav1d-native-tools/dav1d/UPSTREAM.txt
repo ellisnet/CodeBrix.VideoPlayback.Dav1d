@@ -1,0 +1,92 @@
+================================================================================
+dav1d-native-tools/dav1d - VENDORED UPSTREAM SOURCE SNAPSHOT
+================================================================================
+
+WHAT THIS FOLDER IS
+--------------------------------------------------------------------------------
+An unmodified snapshot of the upstream dav1d source tree. It is the ONLY source
+the native libraries in this repository are ever built from. No build step in
+this repository clones, downloads, or otherwise fetches dav1d (or anything else)
+at build time - see ../README.txt for the rule this exists to satisfy.
+
+UPSTREAM IDENTITY
+--------------------------------------------------------------------------------
+Project        : dav1d - a small and fast AV1 decoder
+Upstream URL   : https://code.videolan.org/videolan/dav1d
+Mirror         : https://github.com/videolan/dav1d
+Tag            : 1.5.4  (tag commit 54706fc6bc0cdecab7e9593974a4039cc038fca7,
+                 tagged 2026-07-14)
+Snapshot commit: 52b9d3d3ec525f5a20849145fa0e879d585f4911
+                 git describe: 1.5.4-1-g52b9d3d3   (tag 1.5.4 plus one commit)
+Commit subject : "aarch64: Always use PIC versions of the movrel macro"
+Author date    : 2026-07-09 14:50:09 +0300
+Commit date    : 2026-08-14 18:04:11 +0000
+Project version: 1.5.4          (meson.build, `version:`)
+API version    : 7.0.0          (include/dav1d/version.h:
+                                 DAV1D_API_VERSION_MAJOR 7, MINOR 0, PATCH 0)
+                 => Linux soname libdav1d.so.7, macOS libdav1d.7.dylib,
+                    Windows dav1d.dll (MSVC) / libdav1d-7.dll (mingw)
+Licence        : BSD-2-Clause - the full text is in COPYING beside this file.
+                 A few files carry additional permissive licences (ISC, the
+                 NetBSD 2-clause variant, and one public-domain mingw-w64
+                 header); every one of them is inventoried, with its full
+                 licence text, in ../../THIRD-PARTY-NOTICES.txt at the root of
+                 this repository.
+
+WHY THIS COMMIT AND NOT THE 1.5.4 TAG
+--------------------------------------------------------------------------------
+The one commit after the tag is an aarch64 correctness fix ("always use PIC
+versions of the movrel macro") that matters for the shared libraries this
+repository ships on ARM64 - macOS arm64 and Windows ARM64 in particular. Pinning
+the tag exactly would ship a known-worse ARM64 binary. Release notes should say
+"upstream dav1d 1.5.4-1-g52b9d3d3".
+
+HOW THE COPY WAS MADE
+--------------------------------------------------------------------------------
+Copied on 2026-08-28 from a clean checkout of the upstream repository at the
+commit above (`git status` reported no modifications and no untracked files),
+with exactly this command:
+
+    rsync -a --exclude='.git/' \
+        /home/jeremy/GitHome/dav1d/ \
+        /home/jeremy/GitHome/CodeBrix.VideoPlayback.Dav1d/dav1d-native-tools/dav1d/
+
+Everything in the upstream working tree was copied EXCEPT the .git directory.
+There were no build directories in the checkout, so nothing else was skipped.
+359 files, about 13 MB. The upstream .gitignore, .gitlab-ci.yml, doc/, examples/,
+package/ (including package/crossfiles/), tests/ and tools/ are all present, so
+the snapshot is a complete, buildable upstream tree and not a subset.
+
+NOT MODIFIED
+--------------------------------------------------------------------------------
+No file in this folder has been modified, renamed, reformatted or deleted, and
+none ever should be. This file (UPSTREAM.txt) is the ONLY addition, and it is a
+new file, not an edit of an upstream one.
+
+If a future build ever needs a change to this source, it goes in
+../patches/*.patch and is applied by the build scripts into a scratch copy at
+build time, never into this folder. As of 2026-08-28 there are no patches.
+
+TWO THINGS UPSTREAM WOULD FETCH, AND WHY NEITHER HAPPENS HERE
+--------------------------------------------------------------------------------
+1. subprojects/checkasm.wrap - a meson wrap that would git-clone the checkasm
+   test harness. It is consulted ONLY when the build enables tests. Every build
+   in this repository passes -Denable_tests=false, so meson never looks at it
+   and no clone is attempted.
+
+2. tools/output/xxhash.c - dav1d's optional xxh3 muxer, which needs an xxhash.h
+   that upstream expects you to drop into tools/output/ yourself (it is listed
+   in upstream's own .gitignore, i.e. it is never part of the source tree).
+   Every build here passes -Dxxhash_muxer=disabled, so the muxer is switched off
+   deliberately rather than left to "auto" and silently decided by whatever
+   happens to be installed in the build environment. The md5 muxer, which the
+   conformance gate uses, is always built and needs nothing external.
+
+VERIFYING THIS SNAPSHOT AGAINST UPSTREAM (optional, needs network)
+--------------------------------------------------------------------------------
+    git clone https://code.videolan.org/videolan/dav1d /tmp/dav1d-verify
+    git -C /tmp/dav1d-verify checkout 52b9d3d3ec525f5a20849145fa0e879d585f4911
+    diff -r -x '.git' /tmp/dav1d-verify .        # expect no differences
+
+That check is a convenience for a human, not a build step: nothing in the build
+depends on it, and the build works with no network at all.

@@ -1,0 +1,236 @@
+================================================================================
+dav1d-native-tools/BUILD-PROVENANCE.txt
+what was actually built, when, by what, and with what result
+================================================================================
+
+WHY THIS FILE EXISTS
+--------------------------------------------------------------------------------
+A binary in a package is anonymous. This file is how anyone later can tell which
+native library came from which source, which toolchain and which build machine -
+without which "rebuild it and see if it matches" is not a question that can even
+be asked. Every time a binary is adopted into the package's runtimes/ tree, its
+section here is updated from that build's output/<rid>/BUILD-INFO.txt.
+
+Common to every entry below
+--------------------------------------------------------------------------------
+  Source          : dav1d-native-tools/dav1d/ - vendored upstream snapshot
+  dav1d version   : 1.5.4  (git describe 1.5.4-1-g52b9d3d3)
+  dav1d commit    : 52b9d3d3ec525f5a20849145fa0e879d585f4911
+  API version     : 7.0.0  -> soname libdav1d.so.7
+  Licence         : BSD-2-Clause (dav1d/COPYING, shipped as LICENSE beside every
+                    binary; see ../THIRD-PARTY-NOTICES.txt)
+  Patches applied : NONE. The vendored source is unmodified upstream.
+  meson options   : --buildtype=release -Ddefault_library=shared -Dbitdepths=8,16
+                    -Denable_asm=true -Denable_tools=true -Denable_tests=false
+                    -Denable_examples=false -Dxxhash_muxer=disabled
+                    (Windows adds -Db_vscrt=static_from_buildtype)
+  Reproducibility : each RID was built three times from scratch on 2026-08-28
+                    (twice separately, once through a full `./build.sh` run) and
+                    produced a byte-identical library every time - the sha256
+                    values below are stable, not one-off observations.
+  Conformance     : all seven decodes in test-vectors/EXPECTED.md5 must match.
+                    The expected hashes are architecture-independent, so the
+                    same seven values appear under every RID below:
+                      01-8bit-420-aom.ivf              (grain 1) eacbb8abacc8bd95f290ee94e4b7fd8e
+                      02-8bit-420-svtav1.ivf           (grain 1) c38ed6ef9568f89ebe677590f8d9f8bc
+                      03-10bit-420-aom.ivf             (grain 1) 76fdc38759ef4d1f863be100c49f8d7f
+                      04-8bit-444-aom.ivf              (grain 1) 3fa9cbeae219dd519d44756ce44aaeb9
+                      05-8bit-420-filmgrain-svtav1.ivf (grain 1) 3d35ef826623fc31dfb7af5403833617
+                      05-8bit-420-filmgrain-svtav1.ivf (grain 0) c716ab1237c27b99976580065b7a4bd8
+                      06-8bit-420-oddsize-keyframes-aom.ivf
+                                                       (grain 1) 7d37c280ac0bd5dd758d1397663b4d28
+
+
+================================================================================
+linux-x64                                                          BUILT + PASSED
+================================================================================
+Built            : 2026-08-29 01:15 UTC (2026-08-28 local)
+Built by         : linux/build.sh x64 -> container-build.sh
+Build host       : Dell Precision 7770, LMDE 7, x86_64, podman 5.4.2
+Duration         : 10-11s inside the container
+Network          : DISABLED (--network none; only the loopback interface existed)
+Derived image    : codebrix-dav1d-build-x86_64
+Base image       : quay.io/pypa/manylinux_2_28_x86_64:2026.07.19-1
+                   @sha256:a61875a2f84cab7df8de222ff12cabc08ff86eb4ad402ac90ba7bdaed9600cca
+Container OS     : AlmaLinux 8.10 (Cerulean Leopard), glibc 2.28
+Compiler         : gcc (GCC) 14.2.1 20250110 (Red Hat 14.2.1-11)
+Assembler        : GNU as 2.41-4.el8_10.1
+nasm             : NASM 2.15.03
+meson / ninja    : 1.12.0 / 1.13.0 (pinned)
+
+File             : libdav1d.so       SONAME libdav1d.so.7
+Size (stripped)  : 2,074,952 bytes
+Size (unstripped): 2,952,712 bytes
+Size (xz staged) : 668,504 bytes
+SHA256           : 3084497b81ea9928c6cebe19d8fd88ae0ab56dfa05594624fb9e7c71a41dbf71
+SHA256 unstripped: 78e9278e91deaca52853846892010596898440eb9a13b817f371e7e7b2aa70bd
+glibc floor      : 2.14  (ceiling 2.28)
+Dynamic deps     : libc.so.6 libdl.so.2 libpthread.so.0
+SIMD present     : yes - 6,788 AVX2/SSSE3/SSE4 symbols in the unstripped binary
+Gate             : architecture ok, 17/17 exports, ldd -r clean, glibc floor ok,
+                   smoke test passed (API 7.0.0, decoder opened and closed),
+                   7/7 conformance decodes matched
+Adopted into runtimes/linux-x64/native/ : not yet (the package project does not
+                   exist yet - Phase C scaffolding follows)
+
+
+================================================================================
+linux-arm64                                                        BUILT + PASSED
+================================================================================
+Built            : 2026-08-29 01:15 UTC (2026-08-28 local)
+Built by         : linux/build.sh arm64 -> container-build.sh
+Build host       : the same x86_64 laptop, under qemu-user emulation (qemu 10.0)
+Duration         : 67s inside the container (85s when run alongside riscv64)
+Network          : DISABLED (--network none)
+Derived image    : codebrix-dav1d-build-aarch64
+Base image       : quay.io/pypa/manylinux_2_28_aarch64:2026.07.19-1
+                   @sha256:162c81dfd3efc710732a571717d3c916a6945ebf279e879ddee3243af96fe46f
+Container OS     : AlmaLinux 8.10 (Cerulean Leopard), glibc 2.28
+Compiler         : gcc (GCC) 14.2.1 20250110 (Red Hat 14.2.1-11)
+Assembler        : GNU as 2.41-4.el8_10.1
+nasm             : not used (x86 only)
+meson / ninja    : 1.12.0 / 1.13.0 (pinned)
+
+File             : libdav1d.so       SONAME libdav1d.so.7
+Size (stripped)  : 919,928 bytes
+Size (unstripped): 1,030,944 bytes
+Size (xz staged) : 300,504 bytes
+SHA256           : 120d0d6287df3c256ec56071d2fdf662b12ee1be746fd4ac961a5f639725d378
+SHA256 unstripped: f8d3c17d0712b5203694cdcdcc17bbb9808240612f2e444680e668157e5c40a1
+glibc floor      : 2.17  (ceiling 2.28)
+Dynamic deps     : libc.so.6 libdl.so.2 libpthread.so.0
+SIMD present     : yes - 1,438 NEON symbols including dotprod and i8mm variants
+Gate             : architecture ok, 17/17 exports, ldd -r clean, glibc floor ok,
+                   smoke test passed UNDER EMULATION (the library really ran),
+                   7/7 conformance decodes matched, identical to linux-x64
+Note             : emulation exercises the NEON code paths, but qemu is not
+                   silicon. Running the managed test suite on real arm64
+                   hardware remains worth doing before a release.
+Adopted into runtimes/linux-arm64/native/ : not yet
+
+
+================================================================================
+linux-riscv64                                                      BUILT + PASSED
+================================================================================
+Built            : 2026-08-29 01:15 UTC (2026-08-28 local)
+Built by         : linux/build.sh riscv64 -> container-build.sh
+Build host       : the same x86_64 laptop, under qemu-user emulation (qemu 10.0)
+Duration         : 69s inside the container (85s when run alongside arm64)
+Network          : DISABLED (--network none)
+Derived image    : codebrix-dav1d-build-riscv64
+Base image       : quay.io/pypa/manylinux_2_39_riscv64:2026.07.19-1
+                   @sha256:04b3acc69a6cebb10ac1252587d202acce6445d91c783d3f92229bb2b2483069
+Container OS     : Rocky Linux 10.2 (Red Quartz), glibc 2.39
+Compiler         : gcc (GCC) 14.3.1 20251022 (Red Hat 14.3.1-4)
+Assembler        : GNU as 2.41-63.el10  - satisfies the >= 2.38 RVV requirement,
+                   PROVEN by assembling `.option arch, +v` when the derived image
+                   was built, not merely inferred from the version number
+nasm             : not used (x86 only)
+meson / ninja    : 1.12.0 / 1.13.0 (pinned)
+
+File             : libdav1d.so       SONAME libdav1d.so.7
+Size (stripped)  : 631,272 bytes
+Size (unstripped): 703,520 bytes
+Size (xz staged) : 313,440 bytes
+SHA256           : 6fc64b836cfb245225030c564dabebea94899fb2811ab7ca1bb31535e83ea118
+SHA256 unstripped: b54aa391e884cac4188f2249a5bd73d1cee10bfcbc2c5fbb5761d91edea89180
+glibc floor      : 2.34  (ceiling 2.39)
+Dynamic deps     : libc.so.6   (glibc 2.34+ folds libpthread and libdl into libc)
+SIMD present     : YES - 572 RVV symbols in the unstripped binary. -Denable_asm
+                   was NOT degraded for this architecture; the vector DSP code is
+                   in the shipped library.
+Gate             : architecture ok, 17/17 exports, ldd -r clean, glibc floor ok,
+                   smoke test passed UNDER EMULATION, 7/7 conformance decodes
+                   matched, identical to linux-x64 and linux-arm64
+Note             : qemu 10 emulates RVV 1.0, so the vector paths did execute
+                   during the gate. Real RISC-V hardware is still the last word;
+                   the RVV code is selected at run time from AT_HWCAP plus
+                   dav1d_has_compliant_rvv(), so a board without V simply uses
+                   the scalar paths.
+Adopted into runtimes/linux-riscv64/native/ : not yet
+
+
+================================================================================
+win-x64                                                               NOT BUILT
+================================================================================
+No binary exists yet. windows/build-win-x64.ps1 was written on 2026-08-28 but
+has never been executed - see windows/README.txt.
+
+Built            : ----
+Built by         : windows\build-win-x64.ps1
+Build host       : ----  (Windows x64; VS 2022 Build Tools, Python, meson, ninja,
+                   nasm - the exact versions go here)
+Compiler         : ----
+meson / ninja    : ----
+nasm             : ----
+File             : dav1d.dll
+Size             : ----
+SHA256           : ----
+Dependents       : ----  (must be KERNEL32.dll only - no VC runtime)
+Gate             : ----
+Adopted into runtimes/win-x64/native/ : no
+
+
+================================================================================
+win-arm64                                                             NOT BUILT
+================================================================================
+No binary exists yet. windows/build-win-arm64.ps1 was written on 2026-08-28 but
+has never been executed - see windows/README.txt.
+
+Built            : ----
+Built by         : windows\build-win-arm64.ps1   (route: Native | CrossFromX64)
+Build host       : ----  (preferably an ARM64 Windows machine, so the gate can
+                   run what it built)
+Compiler         : ----  (clang-cl, from the "C++ Clang tools for Windows"
+                   component - not cl, which would need gas-preprocessor + Perl)
+meson / ninja    : ----
+File             : dav1d.dll
+Size             : ----
+SHA256           : ----
+Dependents       : ----  (must be KERNEL32.dll only)
+Gate             : ----
+Adopted into runtimes/win-arm64/native/ : no
+
+
+================================================================================
+osx-arm64                                                             NOT BUILT
+================================================================================
+No binary exists yet. macos/build-osx-arm64.sh was written on 2026-08-28 but has
+never been executed - see macos/README.txt.
+
+Built            : ----
+Built by         : macos/build-osx-arm64.sh
+Build host       : ----  (Apple Silicon Mac; macOS version, Xcode CLT version)
+Compiler         : ----  (Apple clang)
+meson / ninja    : ----
+File             : libdav1d.dylib      install name @rpath/libdav1d.dylib
+Size             : ----
+SHA256           : ----
+Deployment target: 11.0 (expected; the gate checks it)
+Dependencies     : ----  (must be /usr/lib/libSystem.B.dylib only)
+Signature        : ----  (ad-hoc)
+Gate             : ----
+Adopted into runtimes/osx-arm64/native/ : no
+
+
+================================================================================
+osx-x64                                                               NOT BUILT
+================================================================================
+No binary exists yet. macos/build-osx-x64.sh was written on 2026-08-28 but has
+never been executed - see macos/README.txt.
+
+Built            : ----
+Built by         : macos/build-osx-x64.sh (cross-compiled on the same Apple
+                   Silicon Mac via macos/crossfile-x86_64.txt)
+Compiler         : ----  (Apple clang -arch x86_64)
+meson / ninja    : ----
+nasm             : ----
+File             : libdav1d.dylib      install name @rpath/libdav1d.dylib
+Size             : ----
+SHA256           : ----
+Deployment target: 11.0 (expected; the gate checks it)
+Dependencies     : ----  (must be /usr/lib/libSystem.B.dylib only)
+Signature        : ----  (ad-hoc - the linker does NOT sign x86_64 output)
+Rosetta 2        : ----  (needed to RUN the gate, not to build)
+Gate             : ----
+Adopted into runtimes/osx-x64/native/ : no

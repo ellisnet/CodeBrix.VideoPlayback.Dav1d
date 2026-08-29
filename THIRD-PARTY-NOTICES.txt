@@ -1,0 +1,410 @@
+THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
+
+CodeBrix.VideoPlayback.Dav1d is a thin managed wrapper around dav1d, the
+VideoLAN AV1 decoder, together with the native dav1d libraries it P/Invokes
+into. Two distinct things in this repository come from other people, and both
+are covered below:
+
+  1. THE VENDORED SOURCE. dav1d-native-tools/dav1d/ is an unmodified snapshot of
+     the upstream dav1d source tree, committed to this repository so the native
+     libraries can be rebuilt from it alone, years from now, with no dependency
+     that may have disappeared. It is the only source the native libraries are
+     ever built from.
+
+  2. THE SHIPPED BINARIES. The package's runtimes/<rid>/native/ folders contain
+     libdav1d.so / libdav1d.dylib / dav1d.dll compiled from exactly that source,
+     for seven runtime identifiers.
+
+Both are governed by the licences reproduced in full below. Every one of them -
+BSD-2-Clause, ISC, the NetBSD 2-clause variant, and one public-domain header -
+is permissive and compatible with this repository's own BSD-2-Clause licence.
+
+HOW BSD-2-CLAUSE CLAUSE 2 IS SATISFIED
+    Clause 2 requires a binary distribution to reproduce the copyright notice
+    and the licence "in the documentation and/or other materials provided with
+    the distribution". Every build script in dav1d-native-tools/ copies dav1d's
+    own COPYING file into its output folder as LICENSE, and the adoption step
+    copies it into runtimes/<rid>/native/ beside the binary. So the licence text
+    physically travels inside the NuGet package, next to every native library,
+    on every platform - in addition to this file.
+
+WHAT WAS OMITTED FROM THE VENDORED COPY
+    Nothing, apart from the upstream .git directory. The snapshot is the
+    complete upstream working tree - source, headers, tests, tools, examples,
+    documentation, meson crossfiles, CI configuration and all - so it can be
+    diffed against upstream and built without additions. The exact copy command
+    is recorded in dav1d-native-tools/dav1d/UPSTREAM.txt.
+
+WHAT WAS MODIFIED
+    NOTHING. Not one vendored file has been edited, renamed, reformatted or
+    deleted. One file was ADDED, and it is a new file rather than a change to an
+    existing one: dav1d-native-tools/dav1d/UPSTREAM.txt, which records where the
+    snapshot came from. dav1d-native-tools/patches/ exists for the day a build
+    needs a source change - applied at build time to a scratch copy, never to
+    the snapshot - and as of 2026-08-28 it is empty. If a patch is ever added,
+    this section must say so, because a patched binary is no longer plain
+    upstream dav1d.
+
+WHAT IS NOT THIRD-PARTY, AND IS DELIBERATELY ABSENT FROM THIS FILE
+    dav1d-native-tools/test-vectors/*.ivf - the six AV1 conformance streams the
+    build gate decodes. They were generated in this repository on 2026-08-28
+    with ffmpeg, from its synthetic lavfi pattern generators (testsrc2,
+    mandelbrot). There is no camera footage, no sample clip, nothing downloaded
+    and nothing anyone else holds a copyright in. They are original content of
+    this repository, and listing them here would be a false statement about
+    their origin. The exact commands that produce them are in
+    dav1d-native-tools/test-vectors/generate-test-vectors.sh.
+
+    Upstream's separate dav1d-test-data conformance repository is NOT used and
+    NOT vendored.
+
+NuGet package dependencies are not listed here; this file covers source code and
+binaries incorporated INTO this repository.
+
+
+================================================================================
+1. dav1d  (the decoder; vendored source and every shipped native library)
+================================================================================
+
+Project:    dav1d - a small and fast AV1 decoder
+Source URL: https://code.videolan.org/videolan/dav1d
+Mirror:     https://github.com/videolan/dav1d
+Version:    1.5.4  (git describe: 1.5.4-1-g52b9d3d3 - the 1.5.4 tag plus one
+            commit, an AArch64 shared-library correctness fix that matters for
+            the ARM64 binaries this package ships)
+Commit:     52b9d3d3ec525f5a20849145fa0e879d585f4911
+            "aarch64: Always use PIC versions of the movrel macro"
+            authored 2026-07-09, committed 2026-08-14
+API:        7.0.0 (include/dav1d/version.h) -> soname libdav1d.so.7
+Licence:    BSD-2-Clause (upstream file: COPYING)
+Vendored:   dav1d-native-tools/dav1d/  (complete tree; see UPSTREAM.txt)
+
+Copyright holders. The upstream COPYING names "VideoLAN and dav1d authors";
+individual source files name more, and the file headers are authoritative. Every
+distinct holder appearing anywhere in the vendored snapshot under the
+BSD-2-Clause terms below:
+
+    VideoLAN and dav1d authors            Nathan Egge
+    Two Orioles, LLC                      Niklas Haas
+    VideoLabs                             Matthias Dressel
+    Martin Storsjo                        Michail Alvanos
+    Janne Grunau                          B Krishnan Iyer
+    Luca Barbato                          Bogdan Gligorijevic
+    James Almer                           Mohd Zaid
+    Arm Limited                           Sungjoon Moon
+    Loongson Technology Corporation Limited
+    The rav1e contributors
+        (in src/x86/itx16_sse.asm and src/x86/cdef16_sse.asm, which carry a
+         "Copyright (c) 2017-2021, The rav1e contributors" line alongside the
+         dav1d ones and are under the same BSD-2-Clause terms)
+
+Every vendored file retains its upstream copyright header verbatim.
+
+WHAT WAS INCORPORATED
+    The entire upstream source tree, unmodified. The native libraries this
+    package ships are compiled from it with:
+        --buildtype=release -Ddefault_library=shared -Dbitdepths=8,16
+        -Denable_asm=true -Denable_tools=true -Denable_tests=false
+        -Denable_examples=false -Dxxhash_muxer=disabled
+    so the shipped binary contains dav1d's decoder including its hand-written
+    SIMD for x86 (SSE/AVX2), AArch64 (NEON, dotprod, i8mm) and RISC-V (RVV 1.0).
+
+WHAT IS BUILT BUT NOT SHIPPED
+    The dav1d command-line tool is built (-Denable_tools=true) because the
+    verification gate uses it to decode the conformance streams and compare
+    hashes. It is not included in the NuGet package.
+
+WHAT IS PRESENT IN THE SNAPSHOT BUT NOT COMPILED INTO ANY SHIPPED BINARY
+    * src/loongarch/* - LoongArch assembly. No LoongArch runtime identifier is
+      shipped, so none of it is built. It is kept because removing files would
+      make the snapshot no longer diffable against upstream.
+    * tests/* - not built (-Denable_tests=false).
+    * examples/* - not built (-Denable_examples=false).
+    * tools/output/xxhash.c - the optional xxh3 muxer, switched off
+      (-Dxxhash_muxer=disabled). It needs an xxhash.h that upstream expects the
+      builder to supply; no xxHash code is present in this repository.
+    * tools/compat/getopt.c and include/compat/getopt.h - compiled into the
+      command-line tool only, and only on platforms whose libc lacks getopt.
+      They are never part of the shipped library. They are covered by entries
+      3 and 4 below.
+
+MODIFICATIONS
+    None. See "WHAT WAS MODIFIED" above.
+
+----- dav1d licence (BSD-2-Clause), reproduced verbatim from COPYING -----
+
+Copyright © 2018-2025, VideoLAN and dav1d authors
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+================================================================================
+2. x264 project - x86inc.asm  (ISC)
+================================================================================
+
+Project:    x264 - the x86 assembly abstraction layer, reused by dav1d
+Source URL: https://www.videolan.org/developers/x264.html
+Authors:    Loren Merritt, Henrik Gramner, Anton Mitrofanov, Fiona Glaser
+Licence:    ISC
+Covers:     dav1d-native-tools/dav1d/src/ext/x86/x86inc.asm
+
+WHAT WAS INCORPORATED
+    The file as upstream dav1d ships it, unmodified. It is a macro header, not
+    executable code of its own: every x86 assembly file in dav1d %includes it,
+    so its macros are expanded into the x86 SIMD of the linux-x64, win-x64 and
+    osx-x64 binaries. It contributes nothing to the ARM64 or RISC-V builds.
+
+WHAT WAS OMITTED
+    Everything else from x264. No x264 encoder code is present in this
+    repository, and none is used.
+
+MODIFICATIONS
+    None.
+
+----- ISC licence, reproduced verbatim from the file header -----
+
+Copyright (C) 2005-2024 x264 project
+
+Authors: Loren Merritt <lorenm@u.washington.edu>
+         Henrik Gramner <henrik@gramner.com>
+         Anton Mitrofanov <BugMaster@narod.ru>
+         Fiona Glaser <fiona@x264.com>
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+
+================================================================================
+3. Loongson Technology Corporation Limited - loongson_asm.S  (ISC)
+================================================================================
+
+Project:    LoongArch assembly helper macros, contributed to dav1d
+Authors:    Gu Xiwei (guxiwei-hf@loongson.cn), Shiyou Yin (yinshiyou-hf@loongson.cn)
+Licence:    ISC (stated in the file: "available under ISC license")
+Covers:     dav1d-native-tools/dav1d/src/loongarch/loongson_asm.S
+
+    Note: the other files in src/loongarch/ carry Loongson copyright lines under
+    dav1d's BSD-2-Clause terms and are covered by entry 1; only this one is ISC.
+
+WHAT WAS INCORPORATED
+    The file as upstream dav1d ships it, unmodified, as part of the complete
+    snapshot.
+
+NOT BUILT INTO ANYTHING SHIPPED
+    This package ships no LoongArch runtime identifier, so no file in
+    src/loongarch/ is compiled into any binary here. It is vendored so the
+    snapshot stays a faithful, diffable copy of upstream.
+
+MODIFICATIONS
+    None.
+
+----- ISC licence, reproduced verbatim from the file header -----
+
+Copyright (c) 2022 Loongson Technology Corporation Limited
+Contributed by Gu Xiwei(guxiwei-hf@loongson.cn)
+               Shiyou Yin(yinshiyou-hf@loongson.cn)
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+
+================================================================================
+4. getopt_long - Todd C. Miller (ISC) and The NetBSD Foundation (BSD-2-Clause)
+================================================================================
+
+Project:    the OpenBSD/NetBSD getopt_long implementation, carried by dav1d as a
+            compatibility shim for platforms whose libc does not provide it
+Source:     OpenBSD getopt_long.c 1.23 / NetBSD getopt_long.c 1.15
+Authors:    Todd C. Miller; Dieter Baron and Thomas Klausner (for The NetBSD
+            Foundation)
+Licences:   TWO, both applying to the same file: ISC (Todd C. Miller) and the
+            NetBSD 2-clause BSD variant (The NetBSD Foundation)
+Covers:     dav1d-native-tools/dav1d/tools/compat/getopt.c
+
+WHAT WAS INCORPORATED
+    The file as upstream dav1d ships it, unmodified.
+
+WHERE IT ENDS UP
+    In the dav1d command-line tool only, and only on platforms whose libc lacks
+    getopt (in practice, Windows). The CLI is built for the verification gate
+    and is NOT shipped in the NuGet package, so this code is in no distributed
+    binary. It is covered here because it is part of the vendored source.
+
+MODIFICATIONS
+    None.
+
+----- ISC licence, reproduced verbatim from the file header -----
+
+Copyright (c) 2002 Todd C. Miller <Todd.Miller@courtesan.com>
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Sponsored in part by the Defense Advanced Research Projects
+Agency (DARPA) and Air Force Research Laboratory, Air Force
+Materiel Command, USAF, under agreement number F39502-99-1-0512.
+
+----- NetBSD Foundation licence (2-clause BSD), reproduced verbatim -----
+
+Copyright (c) 2000 The NetBSD Foundation, Inc.
+All rights reserved.
+
+This code is derived from software contributed to The NetBSD Foundation
+by Dieter Baron and Thomas Klausner.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+
+================================================================================
+5. mingw-w64 runtime - getopt.h  (public domain)
+================================================================================
+
+Project:    the mingw-w64 runtime package
+Source URL: https://www.mingw-w64.org/
+Licence:    none - explicitly placed in the public domain by its authors, with
+            a warranty disclaimer
+Covers:     dav1d-native-tools/dav1d/include/compat/getopt.h
+
+WHAT WAS INCORPORATED
+    The header as upstream dav1d ships it, unmodified. It declares the getopt
+    API for the compatibility shim in entry 4 and, like it, reaches only the
+    command-line tool on platforms lacking getopt - never the shipped library.
+
+MODIFICATIONS
+    None.
+
+----- notice, reproduced verbatim from the file header -----
+
+DISCLAIMER
+This file has no copyright assigned and is placed in the Public Domain.
+This file is part of the mingw-w64 runtime package.
+
+The mingw-w64 runtime package and its code is distributed in the hope that it
+will be useful but WITHOUT ANY WARRANTY.  ALL WARRANTIES, EXPRESSED OR
+IMPLIED ARE HEREBY DISCLAIMED.  This includes but is not limited to
+warranties of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+
+================================================================================
+INVENTORY: HOW THIS FILE WAS COMPILED, AND HOW TO RE-CHECK IT
+================================================================================
+On 2026-08-28 the vendored snapshot was inventoried mechanically, not by
+reading around in it. The snapshot holds 360 files (359 from upstream plus the
+added UPSTREAM.txt); 323 of them carry a copyright notice.
+
+STEP 1 - every distinct notice, with a count:
+
+    cd dav1d-native-tools
+    grep -rl "Copyright" dav1d | xargs grep -h "Copyright" | sort | uniq -c | sort -rn
+
+  79 distinct notice lines. Between them they name 21 distinct copyright
+  holders: the 18 listed in entry 1 under dav1d's BSD-2-Clause, plus the x264
+  project (entry 2), Todd C. Miller and The NetBSD Foundation (entry 4).
+  Loongson appears in two places - most of its files are BSD-2-Clause (entry 1)
+  and one is ISC (entry 3) - and is counted once. The two most common notices by
+  far are "VideoLAN and dav1d authors" (160 files) and "Two Orioles, LLC" (127).
+
+STEP 2 - which copyright-bearing files do NOT carry dav1d's BSD-2-Clause wording:
+
+    for f in $(grep -rl "Copyright" dav1d); do
+        grep -q "Redistribution and use in source and binary forms" "$f" || echo "$f"
+    done
+
+  Exactly five files, and each was then read:
+    dav1d/src/ext/x86/x86inc.asm        ISC              -> entry 2
+    dav1d/src/loongarch/loongson_asm.S  ISC              -> entry 3
+    dav1d/src/dav1d.rc.in               covered by entry 1: its only "copyright"
+    dav1d/tools/dav1d.rc.in             is a Windows VERSIONINFO string naming
+                                        VideoLAN, in a resource template
+    dav1d/CONTRIBUTING.md               prose about copyright policy, not a notice
+
+STEP 3 - files carrying an ISC grant, which finds one the step-2 filter cannot
+(tools/compat/getopt.c has TWO licence blocks, and the second one does contain
+the BSD wording, so step 2 passes it over):
+
+    grep -rl "Permission to use, copy, modify" dav1d
+      dav1d/src/loongarch/loongson_asm.S
+      dav1d/tools/compat/getopt.c        ISC + NetBSD 2-clause -> entry 4
+      dav1d/src/ext/x86/x86inc.asm
+
+STEP 4 - the file with no copyright line at all but its own terms:
+
+    grep -rli "placed in the Public Domain" dav1d
+      dav1d/include/compat/getopt.h      public domain (mingw-w64) -> entry 5
+
+STEP 5 - what is NOT there. Searches across the whole snapshot for MIT
+("Permission is hereby granted, free of charge"), for "Apache License", and for
+"GNU General Public"/"LGPL" all returned NOTHING. There is no MIT, Apache or
+copyleft code in the vendored tree. There is also no xxHash source anywhere in
+this repository - only dav1d's own optional xxh3 muxer, which would need an
+xxhash.h supplied from outside and is switched off in every build here.
+
+Re-run steps 1 to 5 after any change to what is vendored, and update this file
+to match. An entry that is out of date is worse than no entry, because it looks
+like a statement someone checked.

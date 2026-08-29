@@ -1,0 +1,49 @@
+# ==============================================================================
+# dav1d-native-tools/.gitignore
+# ==============================================================================
+#
+# LINE 1 IS LOAD-BEARING - DO NOT DELETE IT.
+#
+# The repository-root .gitignore is the standard Visual Studio / .NET one. It
+# ignores directory names that also occur inside the vendored dav1d source tree:
+#
+#     [Aa][Rr][Mm]/      -> dav1d/src/arm/        (all the NEON assembly)
+#     [Aa][Rr][Mm]64/    -> dav1d/src/arm/64/
+#     [Oo]ut/  [Ll]og/  [Rr]elease/  [Dd]ebug/  bld/  [Oo]bj/ ...
+#
+# Without the "!*" below, those folders would be silently left out of every
+# commit, and the vendored snapshot would not build for the next person who
+# cloned this repository. A nested .gitignore takes precedence over the ones
+# above it, so re-including everything here and then re-ignoring only what this
+# folder genuinely produces is the correct fix - and it keeps the root
+# .gitignore untouched.
+#
+# Verify at any time with:
+#     git check-ignore -v dav1d-native-tools/dav1d/src/arm/64/mc.S
+#         -> should print nothing (i.e. the file is NOT ignored)
+# ==============================================================================
+
+# Re-include everything under this folder, overriding the root .gitignore.
+!*
+!*/
+
+# --- what this folder really does produce, and must not commit ---------------
+
+# Built native libraries, unstripped copies, staged archives, SHA256SUMS. ONE
+# tree, shared by all three platform builds, so all seven RIDs land side by side.
+#
+# THE LEADING SLASH MATTERS. Without it this pattern would match ANY directory
+# named "output" at any depth - including dav1d/tools/output/, which holds the
+# vendored muxer sources (md5.c, y4m2.c, yuv.c) that the conformance gate's CLI
+# is built from. That mistake was made and caught here on 2026-08-28: git
+# reported the vendored folder as ignored, which would have shipped a snapshot
+# that cannot build.
+/output/
+
+# ...except the placeholder README that explains what goes there.
+!/output/README.txt
+
+# Local scratch that the scripts may leave behind.
+*.tmp
+*.log
+build-scratch/

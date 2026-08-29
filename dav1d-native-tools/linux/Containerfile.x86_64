@@ -1,0 +1,80 @@
+# =============================================================================================
+# Containerfile.x86_64 - the dav1d build machine for linux-x64
+# =============================================================================================
+#
+# WHAT THIS IS, AND WHY IT IS A SEPARATE STEP
+#   The rule this folder exists for says the LIBRARY BUILD may not reach outside this
+#   repository. Tools installed on a build machine are the one allowed exception - and this
+#   file IS that installation, written down and version-pinned: it takes the digest-pinned
+#   manylinux base image and adds meson, ninja and nasm. Nothing else.
+#
+#   Building this image is the ONLY step that uses the network. The library build afterwards
+#   runs with `--network none` and cannot reach anything even if it wanted to.
+#
+#   build.sh builds this image the first time it is needed and reuses it after that.
+#   To rebuild deliberately:   FORCE_IMAGE_REBUILD=1 ./build.sh x64
+#
+# EVERY VERSION HERE COMES FROM pins.env. The defaults below exist only so a hand-run
+# `podman build -f Containerfile.x86_64 .` still works; build.sh always passes --build-arg.
+# =============================================================================================
+
+ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_x86_64@sha256:a61875a2f84cab7df8de222ff12cabc08ff86eb4ad402ac90ba7bdaed9600cca
+FROM ${BASE_IMAGE}
+
+ARG MESON_VERSION=1.12.0
+ARG NINJA_VERSION=1.13.0
+ARG PYTHON_IN_IMAGE=/opt/python/cp313-cp313/bin/python
+ARG NASM_MIN_VERSION=2.14
+
+LABEL org.opencontainers.image.title="codebrix-dav1d-build-x86_64"
+LABEL org.opencontainers.image.description="dav1d native build machine: manylinux_2_28_x86_64 + meson + ninja + nasm"
+LABEL org.opencontainers.image.source="CodeBrix.VideoPlayback.Dav1d/dav1d-native-tools/linux/Containerfile.x86_64"
+
+# ---------------------------------------------------------------------------------------------
+# 1. Distro packages.
+#    nasm: dav1d's x86 assembly is NASM syntax; without it meson silently builds a C-only
+#          library that is several times slower, which is the exact opposite of the point.
+#    file, xz: used by the verification gate and the staging step.
+#    The apt branch is not dead code - it is what makes this file survive a future base image
+#    that is Debian/Ubuntu-derived rather than AlmaLinux.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    if command -v dnf > /dev/null 2>&1; then \
+        dnf install -y --setopt=install_weak_deps=False nasm file xz; \
+        dnf clean all; \
+    elif command -v apt-get > /dev/null 2>&1; then \
+        apt-get update; \
+        apt-get install -y --no-install-recommends nasm file xz-utils; \
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        echo "ERROR: no dnf and no apt-get in this image." >&2; exit 1; \
+    fi
+
+# ---------------------------------------------------------------------------------------------
+# 2. meson + ninja, at the pinned versions, from the image's own CPython.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    "${PYTHON_IN_IMAGE}" -m pip install --no-cache-dir "meson==${MESON_VERSION}" "ninja==${NINJA_VERSION}"; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/meson" /usr/local/bin/meson; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/ninja" /usr/local/bin/ninja
+
+# ---------------------------------------------------------------------------------------------
+# 3. Prove the toolchain. A missing or too-old tool fails the IMAGE build, here, where the
+#    message is obvious - not three minutes into a library build.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    echo "=== toolchain in codebrix-dav1d-build-x86_64 ==="; \
+    grep -m1 PRETTY_NAME /etc/os-release; \
+    cc --version | head -1; \
+    as --version | head -1; \
+    ld --version | head -1; \
+    ldd --version | head -1; \
+    meson --version; \
+    ninja --version; \
+    nasm -v; \
+    nasm_ver="$(nasm -v | awk '{print $3}')"; \
+    printf '%s\n%s\n' "${NASM_MIN_VERSION}" "${nasm_ver}" | sort -V -C \
+        || { echo "ERROR: nasm ${nasm_ver} is older than the required ${NASM_MIN_VERSION}." >&2; exit 1; }; \
+    echo "nasm ${nasm_ver} >= ${NASM_MIN_VERSION}: ok"
+
+WORKDIR /work

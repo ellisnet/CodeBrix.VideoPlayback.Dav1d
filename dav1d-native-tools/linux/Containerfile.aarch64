@@ -1,0 +1,83 @@
+# =============================================================================================
+# Containerfile.aarch64 - the dav1d build machine for linux-arm64
+# =============================================================================================
+#
+# WHAT THIS IS, AND WHY IT IS A SEPARATE STEP
+#   The rule this folder exists for says the LIBRARY BUILD may not reach outside this
+#   repository. Tools installed on a build machine are the one allowed exception - and this
+#   file IS that installation, written down and version-pinned: it takes the digest-pinned
+#   manylinux base image and adds meson and ninja. Nothing else.
+#
+#   Building this image is the ONLY step that uses the network. The library build afterwards
+#   runs with `--network none` and cannot reach anything even if it wanted to.
+#
+#   build.sh builds this image the first time it is needed and reuses it after that.
+#   To rebuild deliberately:   FORCE_IMAGE_REBUILD=1 ./build.sh arm64
+#
+# NO NASM HERE, ON PURPOSE. dav1d's AArch64 assembly is GNU-assembler syntax and goes through
+# the C compiler's own assembler (`as`), which the base image already has. nasm is an x86-only
+# requirement.
+#
+# ON AN x86_64 HOST THIS IMAGE BUILDS AND RUNS UNDER qemu-user EMULATION. It is slow but it is
+# a genuine aarch64 userland, so the NEON/DotProd/i8mm assembly is really assembled and the
+# built library is really executed by the gate.
+#
+# EVERY VERSION HERE COMES FROM pins.env. The defaults below exist only so a hand-run
+# `podman build -f Containerfile.aarch64 .` still works; build.sh always passes --build-arg.
+# =============================================================================================
+
+ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_aarch64@sha256:162c81dfd3efc710732a571717d3c916a6945ebf279e879ddee3243af96fe46f
+FROM ${BASE_IMAGE}
+
+ARG MESON_VERSION=1.12.0
+ARG NINJA_VERSION=1.13.0
+ARG PYTHON_IN_IMAGE=/opt/python/cp313-cp313/bin/python
+
+LABEL org.opencontainers.image.title="codebrix-dav1d-build-aarch64"
+LABEL org.opencontainers.image.description="dav1d native build machine: manylinux_2_28_aarch64 + meson + ninja"
+LABEL org.opencontainers.image.source="CodeBrix.VideoPlayback.Dav1d/dav1d-native-tools/linux/Containerfile.aarch64"
+
+# ---------------------------------------------------------------------------------------------
+# 1. Distro packages: file and xz, used by the verification gate and the staging step.
+#    The apt branch is not dead code - it is what makes this file survive a future base image
+#    that is Debian/Ubuntu-derived rather than AlmaLinux.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    if command -v dnf > /dev/null 2>&1; then \
+        dnf install -y --setopt=install_weak_deps=False file xz; \
+        dnf clean all; \
+    elif command -v apt-get > /dev/null 2>&1; then \
+        apt-get update; \
+        apt-get install -y --no-install-recommends file xz-utils; \
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        echo "ERROR: no dnf and no apt-get in this image." >&2; exit 1; \
+    fi
+
+# ---------------------------------------------------------------------------------------------
+# 2. meson + ninja, at the pinned versions, from the image's own CPython.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    "${PYTHON_IN_IMAGE}" -m pip install --no-cache-dir "meson==${MESON_VERSION}" "ninja==${NINJA_VERSION}"; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/meson" /usr/local/bin/meson; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/ninja" /usr/local/bin/ninja
+
+# ---------------------------------------------------------------------------------------------
+# 3. Prove the toolchain, including that this really is an aarch64 userland and that `as`
+#    accepts the ARMv8.2 extensions dav1d's newer DSP paths are written against.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    echo "=== toolchain in codebrix-dav1d-build-aarch64 ==="; \
+    grep -m1 PRETTY_NAME /etc/os-release; \
+    uname -m; \
+    cc --version | head -1; \
+    as --version | head -1; \
+    ld --version | head -1; \
+    ldd --version | head -1; \
+    meson --version; \
+    ninja --version; \
+    printf '.arch armv8.2-a+dotprod+i8mm\nsdot v0.4s, v1.16b, v2.16b\nsmmla v0.4s, v1.16b, v2.16b\n' > /tmp/neon-probe.s; \
+    as -o /tmp/neon-probe.o /tmp/neon-probe.s; \
+    echo "assembler accepts dotprod + i8mm: ok"
+
+WORKDIR /work

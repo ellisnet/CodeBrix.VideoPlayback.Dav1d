@@ -1,0 +1,95 @@
+# =============================================================================================
+# Containerfile.riscv64 - the dav1d build machine for linux-riscv64
+# =============================================================================================
+#
+# WHAT THIS IS, AND WHY IT IS A SEPARATE STEP
+#   The rule this folder exists for says the LIBRARY BUILD may not reach outside this
+#   repository. Tools installed on a build machine are the one allowed exception - and this
+#   file IS that installation, written down and version-pinned: it takes the digest-pinned
+#   manylinux base image and adds meson and ninja. Nothing else.
+#
+#   Building this image is the ONLY step that uses the network. The library build afterwards
+#   runs with `--network none` and cannot reach anything even if it wanted to.
+#
+#   build.sh builds this image the first time it is needed and reuses it after that.
+#   To rebuild deliberately:   FORCE_IMAGE_REBUILD=1 ./build.sh riscv64
+#
+# THE ONE THING THAT CAN GO WRONG ON THIS ARCHITECTURE
+#   dav1d's RISC-V DSP code is RVV 1.0 vector assembly, and meson refuses to build it unless
+#   the assembler accepts `.option arch, +v` - GNU binutils >= 2.38, or clang >= 17. If it does
+#   not, meson does NOT fail: it quietly builds a C-only library that is several times slower.
+#   Step 3 below therefore ASSEMBLES a two-line RVV file and fails the image build if it does
+#   not go through, so the degradation can never happen silently.
+#
+#   This base image is manylinux_2_39 because riscv64 manylinux exists in no older form; that
+#   sets the glibc floor for linux-riscv64 at 2.39 (Debian 13 / Ubuntu 24.04+, which is every
+#   riscv64 distribution anyone actually runs).
+#
+# ON AN x86_64 HOST THIS IMAGE BUILDS AND RUNS UNDER qemu-user EMULATION. qemu 10 emulates
+# RVV 1.0, so the vector code paths really execute during the gate.
+#
+# EVERY VERSION HERE COMES FROM pins.env. The defaults below exist only so a hand-run
+# `podman build -f Containerfile.riscv64 .` still works; build.sh always passes --build-arg.
+# =============================================================================================
+
+ARG BASE_IMAGE=quay.io/pypa/manylinux_2_39_riscv64@sha256:04b3acc69a6cebb10ac1252587d202acce6445d91c783d3f92229bb2b2483069
+FROM ${BASE_IMAGE}
+
+ARG MESON_VERSION=1.12.0
+ARG NINJA_VERSION=1.13.0
+ARG PYTHON_IN_IMAGE=/opt/python/cp313-cp313/bin/python
+ARG BINUTILS_MIN_FOR_RVV=2.38
+
+LABEL org.opencontainers.image.title="codebrix-dav1d-build-riscv64"
+LABEL org.opencontainers.image.description="dav1d native build machine: manylinux_2_39_riscv64 + meson + ninja"
+LABEL org.opencontainers.image.source="CodeBrix.VideoPlayback.Dav1d/dav1d-native-tools/linux/Containerfile.riscv64"
+
+# ---------------------------------------------------------------------------------------------
+# 1. Distro packages: file and xz, used by the verification gate and the staging step.
+#    The apt branch is not dead code: this base image is Rocky Linux today, but the riscv64
+#    manylinux line has been rebased before and a Debian/Ubuntu base is entirely possible.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    if command -v dnf > /dev/null 2>&1; then \
+        dnf install -y --setopt=install_weak_deps=False file xz; \
+        dnf clean all; \
+    elif command -v apt-get > /dev/null 2>&1; then \
+        apt-get update; \
+        apt-get install -y --no-install-recommends file xz-utils; \
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        echo "ERROR: no dnf and no apt-get in this image." >&2; exit 1; \
+    fi
+
+# ---------------------------------------------------------------------------------------------
+# 2. meson + ninja, at the pinned versions, from the image's own CPython.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    "${PYTHON_IN_IMAGE}" -m pip install --no-cache-dir "meson==${MESON_VERSION}" "ninja==${NINJA_VERSION}"; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/meson" /usr/local/bin/meson; \
+    ln -sf "$(dirname "${PYTHON_IN_IMAGE}")/ninja" /usr/local/bin/ninja
+
+# ---------------------------------------------------------------------------------------------
+# 3. Prove the toolchain - and specifically prove the RVV assembler requirement by assembling
+#    RVV 1.0 code, which is worth more than any version string.
+# ---------------------------------------------------------------------------------------------
+RUN set -eux; \
+    echo "=== toolchain in codebrix-dav1d-build-riscv64 ==="; \
+    grep -m1 PRETTY_NAME /etc/os-release; \
+    uname -m; \
+    cc --version | head -1; \
+    as --version | head -1; \
+    ld --version | head -1; \
+    ldd --version | head -1; \
+    meson --version; \
+    ninja --version; \
+    echo "--- RVV 1.0 assembler probe (binutils >= ${BINUTILS_MIN_FOR_RVV} or clang >= 17) ---"; \
+    printf '.option arch, +v\nvsetivli zero, 4, e32, m1, ta, ma\nvadd.vv v1, v2, v3\n' > /tmp/rvv-probe.s; \
+    as -o /tmp/rvv-probe.o /tmp/rvv-probe.s \
+        || { echo "ERROR: this assembler cannot assemble RVV 1.0 (.option arch, +v)." >&2; \
+             echo "       dav1d would silently build without its RISC-V vector DSP code." >&2; \
+             echo "       Use a base image with binutils >= ${BINUTILS_MIN_FOR_RVV} or clang >= 17." >&2; \
+             exit 1; }; \
+    echo "assembler accepts RVV 1.0: ok"
+
+WORKDIR /work
