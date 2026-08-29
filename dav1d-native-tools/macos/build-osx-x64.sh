@@ -3,10 +3,14 @@
 # build-osx-x64.sh - build libdav1d.dylib for the osx-x64 runtime identifier
 # ==============================================================================================
 #
-#   >>> NOT YET EXECUTED ON macOS. <<<
-#   Written on Linux on 2026-08-28, from dav1d's own meson.build and documentation, and never run
-#   on a Mac. Read README.txt, "WHAT HAS AND HAS NOT BEEN VERIFIED", before trusting it. When you
-#   do run it, fix what is wrong HERE rather than working around it by hand.
+#   RUN AND VERIFIED ON macOS 2026-08-29 (macOS 26.5.1, Apple clang 21.0.0, nasm 3.02, Rosetta 2).
+#   Built clean on the first attempt and passed the full gate; no fix to this script was needed.
+#   Takes about 24 seconds.
+#
+#   NOT BYTE-REPRODUCIBLE, and that is understood rather than unexplained: consecutive runs
+#   alternate between two outputs that differ ONLY in the 16-byte LC_UUID and the ad-hoc signature
+#   covering it. The shipped code and data are identical either way. README.txt, "WHAT HAS AND HAS
+#   NOT BEEN VERIFIED", has the measurement and the cause.
 #
 # USAGE
 #     cd dav1d-native-tools/macos

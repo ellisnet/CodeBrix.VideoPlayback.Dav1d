@@ -2,17 +2,30 @@
 dav1d-native-tools/macos - building libdav1d.dylib for osx-arm64 and osx-x64
 ================================================================================
 
->>> READ THIS FIRST <<<
+>>> STATUS: RUN AND VERIFIED <<<
 --------------------------------------------------------------------------------
-THE SCRIPTS IN THIS FOLDER HAVE NOT YET BEEN EXECUTED ON macOS. They were written
-on Linux on 2026-08-28, from dav1d's own meson.build and documentation and from
-the way this family's other native tooling works. Every command in them is a
-considered one, but "considered" is not "verified" - see WHAT HAS AND HAS NOT
-BEEN VERIFIED near the end for the exact list of assumptions.
+BOTH macOS SLICES WERE BUILT AND ADOPTED ON 2026-08-29. The scripts were written
+on Linux on 2026-08-28 and had never been executed on a Mac; on their first real
+run both built clean and passed the full gate, and NO script needed fixing. The
+"expect to fix something" warning that used to stand here has been earned out.
 
-When you first run them, expect to fix something. Fix it IN THE SCRIPT and
-commit that, rather than working around it by hand: the point of this folder is
-that these libraries can be rebuilt from this repository alone, years from now.
+  Build machine : Apple Silicon Mac, macOS 26.5.1, Apple clang 21.0.0
+  Tools         : meson 1.12.0, ninja 1.13.2, nasm 3.02, Rosetta 2 present
+  osx-arm64     : 5-7s,  798,304 bytes stripped, gate fully passed
+  osx-x64       : ~24s, 1,679,264 bytes stripped, gate fully passed
+
+Two things that run taught us, both harmless but both surprising the first time
+you see them - read WHAT HAS AND HAS NOT BEEN VERIFIED before worrying about
+either:
+  * osx-x64 is NOT byte-reproducible. It alternates between two outputs that
+    differ only in the 16-byte LC_UUID and the signature over it. osx-arm64 IS
+    byte-identical across runs.
+  * The osx-x64 link prints dozens of `ld: warning: no platform load command
+    found in ... .obj, assuming: macOS`. Expected; the gate proves it is benign.
+
+If a future run does need a change, fix it IN THE SCRIPT and commit that, rather
+than working around it by hand: the point of this folder is that these libraries
+can be rebuilt from this repository alone, years from now.
 
 
 WHAT THIS IS
@@ -56,6 +69,9 @@ PREREQUISITES
      never invisible. If you want the exact pinned versions:
          pip3 install meson==1.12.0 ninja==1.13.0
 
+     USED ON 2026-08-29: meson 1.12.0 (Homebrew happened to match the pin
+     exactly) and ninja 1.13.2 (newer than the 1.13.0 pin - no effect observed).
+
   3. nasm - FOR osx-x64 ONLY.
 
        brew install nasm
@@ -65,6 +81,11 @@ PREREQUISITES
      quietly builds a C-only library several times slower, which defeats the
      purpose of using dav1d. Not needed for the arm64 slice - its assembly goes
      through clang's own assembler.
+
+     USED ON 2026-08-29: nasm 3.02, a major version newer than the 2.15.03 the
+     Linux x64 build used. It assembled dav1d's x86 SIMD without complaint and
+     the result passed conformance. It is, however, the source of both macOS
+     quirks noted at the top of this file.
 
   4. Rosetta 2 - FOR osx-x64 ONLY, and only to VERIFY, not to build.
 
@@ -83,8 +104,12 @@ PREREQUISITES
 USAGE
 ================================================================================
     cd dav1d-native-tools/macos
-    ./build-osx-arm64.sh
-    ./build-osx-x64.sh
+    ./build-osx-arm64.sh        # about 5-7 seconds
+    ./build-osx-x64.sh          # about 24 seconds
+
+  Each script is self-contained and idempotent: it removes its own scratch and
+  build directories on every run, so re-running is always safe and never needs a
+  manual clean. Neither installs anything.
 
   Output, git-ignored:
     ../output/<rid>/libdav1d.dylib          the file the package ships
@@ -187,31 +212,72 @@ that fails any check exits non-zero and must not be adopted.
 ================================================================================
 WHAT HAS AND HAS NOT BEEN VERIFIED
 ================================================================================
-Verified (on Linux, from the vendored source itself):
-  * The meson options are the ones dav1d accepts - the same options the three
-    Linux builds used successfully on 2026-08-28, straight out of
-    ../linux/pins.env.
-  * The 17 exported symbols really are exported by a release build (checked on
-    all three Linux binaries; on macOS they will carry a leading underscore).
-  * The conformance vectors and their expected hashes are correct and
-    architecture-independent (three decoders, three architectures agreed).
-  * dav1d ships no macOS cross file of its own - crossfile-x86_64.txt here was
-    written for this repository, not copied from upstream.
+Everything that was listed here as an assumption on 2026-08-28 was settled by the
+2026-08-29 run on macOS 26.5.1. Each one held:
 
-NOT verified - assumptions these scripts make:
-  * That meson puts the dylib under <build>/src as libdav1d.<something>.dylib
-    and the CLI at <build>/tools/dav1d. The scripts search rather than
-    hard-coding a path, but the names are assumed.
-  * That `stat -f %z` (BSD stat) is the right form - it is on macOS, but these
-    scripts have never been run there.
-  * That the LC_BUILD_VERSION parsing in build-common.sh matches what current
-    otool prints. There is a fallback for the older LC_VERSION_MIN_MACOSX form.
-  * The Rosetta 2 detection (an oahd process or the libRosettaRuntime file).
-    If it gets this wrong the effect is a false FAILURE, not a false pass -
-    which is the safe direction.
-  * That clang accepts `-arch x86_64` through the meson cross file's binaries
-    entry in the list form used in crossfile-x86_64.txt.
-  * Timings: unknown. On Linux this build takes 11 seconds natively.
+  * meson does put the dylib at <build>/src/libdav1d.7.dylib and the CLI at
+    <build>/tools/dav1d. (Upstream declares library('dav1d') in src/meson.build
+    and executable('dav1d') in tools/meson.build, so the scripts' `find ... -type
+    f` - which also skips meson's unversioned symlink - is right by construction,
+    not by luck.)
+  * `stat -f %z` is correct on macOS.
+  * The LC_BUILD_VERSION parsing matches what current otool prints; it returns
+    exactly "11.0" and compares equal. The LC_VERSION_MIN_MACOSX fallback was
+    never needed.
+  * The Rosetta 2 detection is right: `pgrep -q oahd` succeeds, and the
+    /Library/Apple/usr/libexec/oah/libRosettaRuntime fallback also exists.
+  * clang accepts `-arch x86_64` through the cross file's list form. As a bonus,
+    dav1d's meson uses no cc.run() anywhere, so the cross file needing no
+    needs_exe_wrapper setting is safe rather than merely untested.
+  * Timings: osx-arm64 5-7s, osx-x64 ~24s. (Linux native was 11s.)
+  * All 17 exports are present as _dav1d_* Mach-O symbols on both slices, and
+    both slices reproduce all seven architecture-independent conformance hashes.
+
+TWO THINGS THE RUN TURNED UP THAT NOBODY HAD PREDICTED
+--------------------------------------------------------------------------------
+1. osx-x64 IS NOT BYTE-REPRODUCIBLE. osx-arm64 IS.
+
+   Measured over six consecutive from-scratch runs. osx-arm64 produced one
+   sha256 every time. osx-x64 ALTERNATED between exactly two:
+       runs 1, 3, 5 -> cb876e7513e4264337a5976302b8a07dc4e956fa2561140fd92b62ca52d11ee5
+       runs 2, 4, 6 -> a823a1bc794c46c4500117faf062495d77cb844906859e1c32246508347a3f27
+
+   The two differ in 76 bytes and nothing else:
+       16 bytes - the LC_UUID payload, at file offset 1569-1584
+       60 bytes - inside the ad-hoc code signature, which necessarily changes
+                  because it hashes the LC_UUID
+   Every byte of code and data is identical. Both variants pass the whole gate.
+
+   CAUSE. The difference is upstream of the strip. The UNSTRIPPED link output
+   differs by 712 bytes: one variant carries 19 extra local debug symbols
+   (FGData, FGData.seed, FGData.num_y_points ... FGData_size) that nasm 3.02
+   emits from the STRUCT macros in dav1d's x86 film-grain assembly, and the other
+   does not. `strip -x` removes those local symbols either way - which is why the
+   shipped files match - but ld64 has ALREADY derived the content-based LC_UUID
+   from the pre-strip image by then.
+
+   WHY IT IS LEFT ALONE. The honest options are to drop the UUID entirely
+   (`-Wl,-no_uuid`), which would make crash reports from shipped x64 binaries
+   much harder to symbolicate, or to chase nasm. Neither is worth it for 16 bytes
+   that do not affect execution. What matters is that the claim in
+   ../BUILD-PROVENANCE.txt is accurate: linux-* are byte-reproducible, osx-arm64
+   is byte-reproducible, osx-x64 is reproducible EXCEPT for LC_UUID.
+
+   If you rebuild osx-x64 and get a different sha256 from the one recorded in
+   ../BUILD-PROVENANCE.txt, this is why. Confirm it is only the UUID before
+   concluding anything is wrong:
+       cmp -l old.dylib new.dylib | wc -l          # expect 76
+       otool -l <dylib> | grep -A2 LC_UUID
+
+2. THE osx-x64 LINK IS NOISY, AND THE NOISE IS BENIGN.
+
+   The link prints one of these per nasm-produced object, dozens in all:
+       ld: warning: no platform load command found in '...mc_sse.obj',
+           assuming: macOS
+   nasm's macho64 output carries no LC_BUILD_VERSION, so the linker says it is
+   assuming macOS - which is correct. It does NOT weaken the deployment target:
+   the gate independently checks the finished dylib and finds minos 11.0. Nothing
+   to fix; do not silence it by relaxing the gate.
 
 
 ================================================================================
@@ -247,6 +313,22 @@ A conformance hash mismatch
     edit EXPECTED.md5 to make it pass. Compare with ffmpeg's libdav1d and libaom
     decoders on the same file - the commands are in ../test-vectors/README.txt.
 
+"ld: warning: no platform load command found in ... .obj, assuming: macOS"
+    Expected on osx-x64, dozens of times, one per nasm object. Harmless - see
+    item 2 of WHAT HAS AND HAS NOT BEEN VERIFIED. The gate checks the finished
+    dylib's deployment target independently and it is 11.0.
+
+The osx-x64 sha256 does not match ../BUILD-PROVENANCE.txt
+    Expected, and not a problem, if the ONLY difference is the LC_UUID. See item
+    1 of WHAT HAS AND HAS NOT BEEN VERIFIED for the two known hashes and how to
+    confirm it. osx-arm64, by contrast, must match exactly - if that one differs,
+    something real has changed and you should find out what before shipping it.
+
+"could not find nasm" / the x64 build configures as C-only
+    Homebrew's bin is not on PATH for this shell: eval "$(/opt/homebrew/bin/brew
+    shellenv)". The script requires nasm and stops without it, so a C-only x64
+    build should not be reachable through the script.
+
 
 ================================================================================
 ADOPTING A BUILT BINARY INTO THE PACKAGE
@@ -277,6 +359,27 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
      out of BUILD-INFO.txt.
 
   5. Run the managed test suite before publishing.
+
+WHAT WAS ADOPTED ON 2026-08-29
+--------------------------------------------------------------------------------
+Both macOS slices are in the package tree as of 2026-08-29, copied exactly as
+described above and re-verified after the copy (arch, install name, minos 11.0,
+`codesign -v` valid, all 17 exports present):
+
+  src/CodeBrix.VideoPlayback.Dav1d/runtimes/osx-arm64/native/libdav1d.dylib
+      sha256 3d35c38606a565b530913f05f9cfc6e58fd5f3ce3a8fd52517f29070331482f2
+      798,304 bytes
+  src/CodeBrix.VideoPlayback.Dav1d/runtimes/osx-x64/native/libdav1d.dylib
+      sha256 a823a1bc794c46c4500117faf062495d77cb844906859e1c32246508347a3f27
+      1,679,264 bytes   (LC_UUID variant - see WHAT HAS AND HAS NOT BEEN
+                         VERIFIED; the other variant is equally valid)
+
+with dav1d's COPYING beside each one as LICENSE. Copying preserves the ad-hoc
+signature - verified with `codesign -v` after the copy, which is worth repeating
+whenever these files are moved between machines, because some transports do not.
+
+Still outstanding for this package: win-x64 and win-arm64. The three linux-*
+binaries were built on 2026-08-29 but have not been adopted into runtimes/ yet.
 
 
 ================================================================================

@@ -3,10 +3,10 @@
 # build-osx-arm64.sh - build libdav1d.dylib for the osx-arm64 runtime identifier
 # ==============================================================================================
 #
-#   >>> NOT YET EXECUTED ON macOS. <<<
-#   Written on Linux on 2026-08-28, from dav1d's own meson.build and documentation, and never run
-#   on a Mac. Read README.txt, "WHAT HAS AND HAS NOT BEEN VERIFIED", before trusting it. When you
-#   do run it, fix what is wrong HERE rather than working around it by hand.
+#   RUN AND VERIFIED ON macOS 2026-08-29 (macOS 26.5.1, Apple clang 21.0.0). Built clean on the
+#   first attempt and passed the full gate; no fix to this script was needed. Four consecutive
+#   from-scratch runs produced a BYTE-IDENTICAL dylib, so this slice is reproducible.
+#   Takes about 5-7 seconds.
 #
 # USAGE
 #     cd dav1d-native-tools/macos

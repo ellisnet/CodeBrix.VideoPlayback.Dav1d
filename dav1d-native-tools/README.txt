@@ -84,10 +84,15 @@ WHICH README TO READ
 Each one lists the tools to install on that machine, with the exact command,
 and nothing else is needed.
 
-  >>> As of 2026-08-28 only the three LINUX builds have actually been run.
-      The Windows and macOS scripts were written on Linux and have never been
-      executed on their platforms. Each of those READMEs says so at the top and
-      lists exactly which assumptions are unverified. <<<
+  >>> As of 2026-08-29 the three LINUX and both macOS builds have been run and
+      have passed their gates. The macOS scripts were written on Linux and had
+      never been executed on a Mac; on their first real run both slices built
+      clean and needed no fix. macos/README.txt now records what that run
+      established, including one finding worth knowing about: osx-x64 is
+      reproducible only up to its LC_UUID.
+
+      The WINDOWS scripts have still never been executed. windows/README.txt
+      says so at the top and lists exactly which assumptions are unverified. <<<
 
 
 THE SEVEN RUNTIME IDENTIFIERS
@@ -101,6 +106,10 @@ THE SEVEN RUNTIME IDENTIFIERS
   win-arm64       windows\build-win-arm64.ps1           dav1d.dll
   osx-arm64       macos/build-osx-arm64.sh              libdav1d.dylib
   osx-x64         macos/build-osx-x64.sh                libdav1d.dylib
+
+Built and adopted so far: osx-arm64 and osx-x64 (2026-08-29). Built but not yet
+adopted: linux-x64, linux-arm64, linux-riscv64. Not yet built: win-x64,
+win-arm64. BUILD-PROVENANCE.txt is the authoritative per-RID record.
 
 All seven names are UNVERSIONED on purpose: LibraryImport("dav1d") on .NET
 probes for exactly those names and does not follow sonames. The soname
@@ -144,3 +153,10 @@ A ONE-MINUTE TOUR
     ./build.sh x64          # about 11 seconds; builds, verifies, stages
     cat ../output/linux-x64/BUILD-INFO.txt
     cd ../output && sha256sum -c SHA256SUMS
+
+  On a Mac the equivalent is:
+
+    cd macos
+    ./build-osx-arm64.sh    # about 5-7 seconds
+    ./build-osx-x64.sh      # about 24 seconds
+    cat ../output/osx-arm64/BUILD-INFO.txt

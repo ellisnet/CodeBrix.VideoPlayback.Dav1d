@@ -24,10 +24,18 @@ Common to every entry below
                     -Denable_asm=true -Denable_tools=true -Denable_tests=false
                     -Denable_examples=false -Dxxhash_muxer=disabled
                     (Windows adds -Db_vscrt=static_from_buildtype)
-  Reproducibility : each RID was built three times from scratch on 2026-08-28
-                    (twice separately, once through a full `./build.sh` run) and
-                    produced a byte-identical library every time - the sha256
-                    values below are stable, not one-off observations.
+  Reproducibility : the three linux-* RIDs were each built three times from
+                    scratch on 2026-08-28 (twice separately, once through a full
+                    `./build.sh` run) and produced a byte-identical library every
+                    time. osx-arm64 likewise: four from-scratch runs, one sha256.
+                    osx-x64 IS THE ONE EXCEPTION and is reproducible only up to
+                    its LC_UUID - six runs alternated between two sha256 values
+                    differing in exactly 76 bytes (the 16-byte LC_UUID and the
+                    60 signature bytes covering it), with every byte of code and
+                    data identical. Cause and evidence: macos/README.txt, "WHAT
+                    HAS AND HAS NOT BEEN VERIFIED". Do not treat an osx-x64 hash
+                    mismatch as a defect without checking that first; for every
+                    other RID the sha256 below is exact.
   Conformance     : all seven decodes in test-vectors/EXPECTED.md5 must match.
                     The expected hashes are architecture-independent, so the
                     same seven values appear under every RID below:
@@ -193,44 +201,90 @@ Adopted into runtimes/win-arm64/native/ : no
 
 
 ================================================================================
-osx-arm64                                                             NOT BUILT
+osx-arm64                                                          BUILT + PASSED
 ================================================================================
-No binary exists yet. macos/build-osx-arm64.sh was written on 2026-08-28 but has
-never been executed - see macos/README.txt.
+Built            : 2026-08-29 15:58 UTC
+Built by         : macos/build-osx-arm64.sh (native build)
+Build host       : Apple Silicon Mac, macOS 26.5.1 (arm64)
+Duration         : 5s (5-7s observed across runs)
+Network          : not used - the vendored source, the test vectors and the
+                   expected hashes are all files in this repository
+Compiler         : Apple clang version 21.0.0 (clang-2100.1.1.101)
+Assembler        : clang's integrated assembler (dav1d's AArch64 SIMD is GNU-as
+                   syntax, which clang accepts; nasm is not involved)
+meson / ninja    : 1.12.0 / 1.13.2 (meson matches the pin; ninja is newer than
+                   the pinned 1.13.0, with no observed effect)
 
-Built            : ----
-Built by         : macos/build-osx-arm64.sh
-Build host       : ----  (Apple Silicon Mac; macOS version, Xcode CLT version)
-Compiler         : ----  (Apple clang)
-meson / ninja    : ----
 File             : libdav1d.dylib      install name @rpath/libdav1d.dylib
-Size             : ----
-SHA256           : ----
-Deployment target: 11.0 (expected; the gate checks it)
-Dependencies     : ----  (must be /usr/lib/libSystem.B.dylib only)
-Signature        : ----  (ad-hoc)
-Gate             : ----
-Adopted into runtimes/osx-arm64/native/ : no
+Size (stripped)  : 798,304 bytes
+Size (unstripped): 912,176 bytes
+Size (gz staged) : 366,801 bytes
+SHA256           : 3d35c38606a565b530913f05f9cfc6e58fd5f3ce3a8fd52517f29070331482f2
+SHA256 unstripped: 3ea0c3c6f06e777845442df46eeea727cb1949ca2a4be709e8c783f06c0ceeb8
+LC_UUID          : 70E56A37-E2AB-304E-A4B2-C0C6EC4F3FE6 (stable across runs)
+Deployment target: 11.0  (checked by the gate, not merely requested)
+Dependencies     : /usr/lib/libSystem.B.dylib only
+Signature        : ad-hoc (codesign --sign -), applied after strip and
+                   install_name_tool because both invalidate a signature
+SIMD present     : yes - 1,443 NEON/SVE/DOTPROD symbols in the unstripped binary
+Reproducibility  : byte-identical across four from-scratch runs
+Gate             : architecture ok, 17/17 exports, install name ok, system-only
+                   dependencies, minos 11.0 ok, signature ok, smoke test passed
+                   (API 7.0.0, decoder opened and closed), 7/7 conformance
+                   decodes matched
+Adopted into runtimes/osx-arm64/native/ : YES, 2026-08-29, with dav1d's COPYING
+                   beside it as LICENSE; signature re-verified after the copy
 
 
 ================================================================================
-osx-x64                                                               NOT BUILT
+osx-x64                                                            BUILT + PASSED
 ================================================================================
-No binary exists yet. macos/build-osx-x64.sh was written on 2026-08-28 but has
-never been executed - see macos/README.txt.
-
-Built            : ----
+Built            : 2026-08-29 15:58 UTC
 Built by         : macos/build-osx-x64.sh (cross-compiled on the same Apple
                    Silicon Mac via macos/crossfile-x86_64.txt)
-Compiler         : ----  (Apple clang -arch x86_64)
-meson / ninja    : ----
-nasm             : ----
+Build host       : Apple Silicon Mac, macOS 26.5.1 (arm64) - no Intel Mac used
+Duration         : 24s
+Network          : not used - as osx-arm64 above
+Compiler         : Apple clang version 21.0.0 (clang-2100.1.1.101) -arch x86_64
+meson / ninja    : 1.12.0 / 1.13.2
+nasm             : NASM 3.02 (compiled 2026-06-29). A MAJOR version newer than
+                   the 2.15.03 used for linux-x64. It assembled dav1d's x86 SIMD
+                   without complaint and the result matches conformance, but it
+                   is the cause of the LC_UUID instability recorded below.
+Rosetta 2        : present and used - the smoke test and the seven conformance
+                   decodes ran the x86_64 CLI under it. Needed to VERIFY, not to
+                   build.
+
 File             : libdav1d.dylib      install name @rpath/libdav1d.dylib
-Size             : ----
-SHA256           : ----
-Deployment target: 11.0 (expected; the gate checks it)
-Dependencies     : ----  (must be /usr/lib/libSystem.B.dylib only)
-Signature        : ----  (ad-hoc - the linker does NOT sign x86_64 output)
-Rosetta 2        : ----  (needed to RUN the gate, not to build)
-Gate             : ----
-Adopted into runtimes/osx-x64/native/ : no
+Size (stripped)  : 1,679,264 bytes
+Size (unstripped): 2,438,496 bytes
+Size (gz staged) : 692,841 bytes
+SHA256           : a823a1bc794c46c4500117faf062495d77cb844906859e1c32246508347a3f27
+                   *** SEE Reproducibility BELOW - a rebuild may legitimately
+                   produce cb876e7513e4264337a5976302b8a07dc4e956fa2561140fd92b
+                   62ca52d11ee5 instead. Both are correct. ***
+SHA256 unstripped: ff18cfe1da5fba9b536f4f8853ff1dbfb52c1f776c03983ca6318db369a74177
+LC_UUID          : 134196EB-C570-3C80-AFAB-11581155E80C (NOT stable - see below)
+Deployment target: 11.0  (checked by the gate; the many `ld: warning: no platform
+                   load command found in ... .obj` messages during the link come
+                   from nasm objects carrying no LC_BUILD_VERSION and do not
+                   affect the finished dylib)
+Dependencies     : /usr/lib/libSystem.B.dylib only
+Signature        : ad-hoc (codesign --sign -). Required explicitly here: unlike
+                   arm64, the linker does NOT ad-hoc sign x86_64 output.
+SIMD present     : yes - 9,318 AVX2/AVX-512/SSE symbols in the unstripped binary
+Reproducibility  : NOT byte-identical. Six from-scratch runs alternated between
+                   the two sha256 values above, differing in exactly 76 bytes:
+                   the 16-byte LC_UUID at offset 1569-1584, and 60 bytes of the
+                   ad-hoc signature that covers it. All code and data identical;
+                   both variants pass the entire gate. Cause: nasm 3.02 varies
+                   whether it emits 19 FGData.* local debug symbols from the x86
+                   film-grain assembly's STRUCT macros. `strip -x` removes them
+                   either way, but ld64 derives the content-based LC_UUID from
+                   the pre-strip image. Full evidence in macos/README.txt.
+Gate             : architecture ok, 17/17 exports, install name ok, system-only
+                   dependencies, minos 11.0 ok, signature ok, smoke test passed
+                   under Rosetta (API 7.0.0, decoder opened and closed), 7/7
+                   conformance decodes matched
+Adopted into runtimes/osx-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
+                   beside it as LICENSE; signature re-verified after the copy

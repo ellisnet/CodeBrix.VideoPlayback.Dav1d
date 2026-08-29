@@ -3,10 +3,10 @@
 # build-common.sh - shared machinery for the macOS dav1d builds
 # ==============================================================================================
 #
-#   >>> NOT YET EXECUTED ON macOS. <<<
-#   Written on Linux on 2026-08-28 from dav1d's own meson.build and documentation, and never run
-#   on a Mac. Read README.txt, "WHAT HAS AND HAS NOT BEEN VERIFIED", before trusting it. When you
-#   do run it, fix what is wrong HERE rather than working around it by hand.
+#   RUN AND VERIFIED ON macOS 2026-08-29. Both slices built clean on the first attempt and passed
+#   the full gate; no fix to this file was needed. See README.txt, "WHAT HAS AND HAS NOT BEEN
+#   VERIFIED", for what that run established and for the two known quirks (nasm 3.02 struct
+#   symbols, and the LC_UUID that makes osx-x64 not byte-reproducible).
 #
 # Sourced by build-osx-arm64.sh and build-osx-x64.sh; not meant to be run directly.
 # ==============================================================================================

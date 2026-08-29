@@ -2,7 +2,9 @@
 # crossfile-x86_64.txt - meson cross file: build the osx-x64 slice on an Apple Silicon Mac
 # =============================================================================================
 #
-#   >>> UNVERIFIED. Written on Linux, 2026-08-28; never run on macOS. <<<
+#   VERIFIED 2026-08-29: meson accepts the list form below, selects dav1d's x86 assembly paths and
+#   finds nasm, and the resulting dylib passes the full gate. dav1d's meson uses no cc.run(), so
+#   the absent needs_exe_wrapper setting costs nothing even though the host arch differs.
 #
 # Used by build-osx-x64.sh. Apple's clang is a cross compiler by nature - `-arch x86_64` is all
 # it takes - so this file exists only to tell meson that the HOST machine (the machine the built

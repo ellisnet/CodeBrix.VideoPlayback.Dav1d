@@ -38,7 +38,13 @@
 # is built from. That mistake was made and caught here on 2026-08-28: git
 # reported the vendored folder as ignored, which would have shipped a snapshot
 # that cannot build.
-/output/
+# NOTE THE TRAILING /* RATHER THAN A BARE /output/. A directory that is itself
+# excluded is never descended into, so a later "!" rule can NEVER re-include a
+# file inside it - "/output/" plus "!/output/README.txt" silently ignored the
+# README too, which is exactly why that placeholder was missing from the
+# repository until 2026-08-29. Excluding the CONTENTS instead leaves the
+# directory itself visible, and the negation below then works.
+/output/*
 
 # ...except the placeholder README that explains what goes there.
 !/output/README.txt
@@ -47,3 +53,9 @@
 *.tmp
 *.log
 build-scratch/
+
+# Finder droppings. Needed explicitly: the "!*" above re-includes everything
+# under this folder and so overrides any .DS_Store rule inherited from the root
+# or from a user's global gitignore. Without this line, building on a Mac leaves
+# .DS_Store files that show up as untracked and get swept into a "git add -A".
+.DS_Store
