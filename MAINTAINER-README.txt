@@ -5,53 +5,37 @@ consumers, who want AGENT-README.txt instead
 ================================================================================
 
 
-⚠️ BEFORE THIS PACKAGE IS EVER PUBLISHED - READ THIS FIRST
+⚠️ THE PIN IS PUBLISHED AND THIS PACKAGE IS PUBLISHABLE (2026-08-29)
 ================================================================================
-The package reference in src/CodeBrix.VideoPlayback.Dav1d.csproj currently points
-at a LOCAL PACK of CodeBrix.VideoPlayback that has not been published:
+The package reference in src/CodeBrix.VideoPlayback.Dav1d.csproj points at the
+PUBLISHED CodeBrix.VideoPlayback.MitLicenseForever 1.0.241.1343 (published
+together with CodeBrix.VideoPlayback.Skia.MitLicenseForever on one version, as
+one event, on 2026-08-29). The pin was raised from the local pre-publish pack
+(1.0.241.1148) the same day, and proven real: `dotnet restore --force` with
+`-p:RestoreSources="https://api.nuget.org/v3/index.json"` (nuget.org alone, no
+folder feed) resolves 1.0.241.1343, and obj/project.assets.json lists no local
+source; build 0 warnings, 90/90 tests, and the packed nuspec declares the
+published version as the one dependency.
 
-    <PackageReference Include="CodeBrix.VideoPlayback.MitLicenseForever"
-                      Version="1.0.241.1148" />
-
-That version exists only in a local folder feed on the machine this was built on.
-It was produced by:
+VERIFYING AGAINST AN UNPUBLISHED CodeBrix.VideoPlayback - THE PRE-PUBLISH METHOD
+(kept for the next time this repository must build against work that has not
+been published yet):
 
     cd ~/GitHome/CodeBrix.VideoPlayback
     dotnet pack src/CodeBrix.VideoPlayback/CodeBrix.VideoPlayback.csproj -c Release \
-        -o ~/ClaudeHome/localfeed_codebrix_videoplayback_2026-08-29/
+        -o <some local feed folder>
 
-and restores in this repository are done with the folder feed added on the
-command line, so no nuget.config is committed and nothing about this arrangement
-leaks into the package or into anybody else's build:
-
-    dotnet restore -p:RestoreSources="/home/jeremy/ClaudeHome/localfeed_codebrix_videoplayback_2026-08-29%3Bhttps://api.nuget.org/v3/index.json"
+    # in THIS repository - the feed rides on the command line; no nuget.config
+    # is committed and nothing about the arrangement leaks into the package:
+    dotnet restore -p:RestoreSources="<feed folder>%3Bhttps://api.nuget.org/v3/index.json"
     dotnet build   -c Release
     dotnet test    -c Release
 
 (The %3B is an escaped semicolon; MSBuild property values cannot carry a bare
-one.)
-
-MUST BE DONE BEFORE PUBLISHING THIS PACKAGE:
-
-  1. CodeBrix.VideoPlayback.MitLicenseForever and
-     CodeBrix.VideoPlayback.Skia.MitLicenseForever must be published FIRST, on
-     one version, as one event.
-  2. Change the Version above to the PUBLISHED version of
-     CodeBrix.VideoPlayback.MitLicenseForever.
-  3. Restore from nuget.org alone, with no folder feed and with --force, so the
-     locally packed copy in the global package cache cannot satisfy the
-     reference and hide a mistake:
-
-         dotnet restore --force
-         dotnet build -c Release
-         dotnet test  -c Release
-
-  4. Delete the local folder feed, or move it aside, and repeat step 3 to prove
-     it. A restore that still succeeds after the feed is gone is the only
-     evidence that the pin is real.
-  5. Only then pack and publish.
-
-Publishing against the local version would ship a package nobody can install.
+one.) Before any publish after such a round: raise the pin to the PUBLISHED
+version, restore with --force from nuget.org alone, and prove the feed is not
+needed by moving it aside and restoring again. A restore that still succeeds
+after the feed is gone is the only evidence that the pin is real.
 
 
 PURPOSE AND SCOPE
