@@ -169,7 +169,7 @@ USAGE
 
   Output, git-ignored:
     ..\output\<rid>\dav1d.dll          the file the package ships
-    ..\output\<rid>\LICENSE            dav1d's COPYING, verbatim
+    ..\output\<rid>\LICENSE-Dav1d.txt            dav1d's COPYING, verbatim
     ..\output\<rid>\BUILD-INFO.txt     toolchain, pins, size, sha256, conformance
     ..\output\<rid>\SHA256SUMS.txt     the DLL's hash on its own line
     ..\output\<rid>\dav1d.exe          CROSS ROUTE ONLY - the ARM64 CLI, kept so
@@ -534,7 +534,7 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
 
        mkdir ..\..\src\CodeBrix.VideoPlayback.Dav1d\runtimes\<rid>\native
        copy ..\output\<rid>\dav1d.dll ..\..\src\CodeBrix.VideoPlayback.Dav1d\runtimes\<rid>\native\
-       copy ..\output\<rid>\LICENSE   ..\..\src\CodeBrix.VideoPlayback.Dav1d\runtimes\<rid>\native\
+       copy ..\output\<rid>\LICENSE-Dav1d.txt   ..\..\src\CodeBrix.VideoPlayback.Dav1d\runtimes\<rid>\native\
 
      <rid> is win-x64 or win-arm64. The LICENSE file is not optional:
      BSD-2-Clause clause 2 requires the copyright notice to travel with a binary

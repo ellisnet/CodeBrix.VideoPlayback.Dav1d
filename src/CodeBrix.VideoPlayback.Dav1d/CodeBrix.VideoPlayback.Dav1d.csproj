@@ -1,0 +1,139 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CodeBrix.VideoPlayback.Dav1d</AssemblyName>
+    <RootNamespace>CodeBrix.VideoPlayback.Dav1d</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!--
+      Keep the committed native libraries out of the SDK's default item globs. Without this they arrive as
+      None items with no metadata AS WELL AS through the explicit items below, and the metadata-less copies
+      win, so nothing reaches the package.
+    -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);runtimes\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!--
+    Package / assembly version: date-stamped and auto-incrementing.
+
+    Format:  1.<x>.<y>.<z>   (every field is derived from UTC "now")
+
+      1  (major)     Always 1 for this library.
+      x  (minor)     Whole years since $(_VersionBaseYear).
+                     With base 2026: 2026=0, 2027=1, 2028=2, ...
+      y  (build)     Day of year, 1-based inclusive, UTC.
+                     Jan 1 = 1, Feb 1 = 32, Dec 31 = 365 (366 in a leap year).
+      z  (revision)  Minute of day, UTC, range 0 to 1439.
+                     00:00 = 0, 23:59 = 1439.
+
+    The version is always strictly increasing over time:
+      * within a day, z grows;
+      * at a day boundary, y increments and outranks z resetting to 0;
+      * at a (UTC) year boundary, x increments and outranks y and z resetting.
+
+    Notes / caveats:
+      * All fields read from System.DateTime.UtcNow, so a local dev build and a
+        UTC CI build agree on the value. Math.Floor on the minutes keeps z in
+        0..1439 (plain rounding could land on 1440 late in the day).
+      * Because the value depends on the clock, every build produces a NEW
+        version. With GeneratePackageOnBuild=true that means a fresh .nupkg on
+        each build, and two builds in the SAME UTC minute produce the SAME
+        version (so do not publish two packages from within one minute).
+      * This is date-stamp versioning, not SemVer: minor encodes the year and
+        major is pinned to 1, so major/minor do not signal API compatibility.
+      * To re-baseline the minor number, change _VersionBaseYear below.
+  -->
+  <PropertyGroup>
+    <_VersionBaseYear>2026</_VersionBaseYear>
+    <_VersionYears>$([MSBuild]::Subtract($([System.DateTime]::UtcNow.Year), $(_VersionBaseYear)))</_VersionYears>
+    <_VersionDayOfYear>$([System.DateTime]::UtcNow.DayOfYear)</_VersionDayOfYear>
+    <_VersionMinuteOfDay>$([System.Convert]::ToInt32($([System.Math]::Floor($([System.DateTime]::UtcNow.TimeOfDay.TotalMinutes)))))</_VersionMinuteOfDay>
+    <BuildVersion>1.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>
+    <Version>$(BuildVersion)</Version>
+    <AssemblyVersion>$(BuildVersion)</AssemblyVersion>
+    <FileVersion>$(BuildVersion)</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>CodeBrix.VideoPlayback.Dav1d.BsdLicenseForever</PackageId>
+    <Product>CodeBrix.VideoPlayback.Dav1d</Product>
+    <Title>CodeBrix.VideoPlayback.Dav1d</Title>
+    <Authors>Jeremy Ellis</Authors>
+    <Description>AV1 video decoding for CodeBrix.VideoPlayback. A source-generated binding over the dav1d decoder that decodes straight into the playback session's own frame-buffer pool - no copy between the decoder's output and the graphics upload - with self-built native libraries for Windows x64 and ARM64, macOS Intel and Apple Silicon, and Linux x64, ARM64 and RISC-V 64. One Register() call at start-up makes AV1 playable; nothing else in an application ever names a decoder type.</Description>
+    <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.VideoPlayback.Dav1d</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ellisnet/CodeBrix.VideoPlayback.Dav1d</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageIcon>icon-codebrix-128.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Copyright>Copyright (c) 2026 Jeremy Ellis and contributors.</Copyright>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <IsPackable>true</IsPackable>
+    <PackageTags>video;playback;av1;dav1d;decoder;webm;matroska;cbv;yuv;native;CodeBrix</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CodeBrix.VideoPlayback.MitLicenseForever" Version="1.0.241.1148" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icon-codebrix-128.png" Pack="true" PackagePath="" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+    <None Include="..\..\AGENT-README.txt" Pack="true" PackagePath="" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <!--
+    The seven native dav1d libraries, each beside a copy of the dav1d COPYING file as LICENSE-Dav1d.txt
+    (BSD-2-Clause clause 2). They go into the package in the standard NuGet runtimes layout, so
+    NuGet gives an application the one native for the platform it is building for, and they are
+    ALSO copied into this project's own output - and into the output of anything that references
+    the project directly - so the tests exercise exactly the runtimes/<rid>/native/ layout the
+    library's own probing expects to find.
+
+    The binaries themselves are built by dav1d-native-tools/ and committed; nothing here builds
+    them. See MAINTAINER-README.txt.
+  -->
+  <ItemGroup>
+    <!--
+      The seven committed native libraries, each beside a copy of the dav1d COPYING file as LICENSE-Dav1d.txt
+      (BSD-2-Clause clause 2). They are kept out of the SDK's default item globs above and named once here.
+    -->
+    <_Dav1dNativeLibrary Include="runtimes\**\*" />
+
+    <!--
+      Packed into the standard NuGet runtimes layout, so NuGet gives an application the one native for the
+      platform it is building for.
+
+      The package path is the BARE "runtimes/" folder. NuGet appends the item's own recursive directory and
+      file name to a package path that names a folder, so spelling %(RecursiveDir) out here as well produces
+      runtimes/linux-x64/native/linux-x64/native/libdav1d.so. It is the one piece of this csproj worth
+      checking the package for after any change - see MAINTAINER-README.txt.
+    -->
+    <None Include="@(_Dav1dNativeLibrary)" Pack="true" PackagePath="runtimes\" />
+  </ItemGroup>
+
+  <!--
+    The same files are ALSO copied into this project's output - and into the output of anything that
+    references the project directly - keeping the runtimes/<rid>/native/ layout, so the test suite exercises
+    exactly the layout the library's own probing has to find rather than a flattened one that would never
+    fail.
+
+    This goes through ContentWithTargetPath rather than a second Content item because NuGet's pack collects
+    None and Content together and de-duplicates by identity: a Content item for the same file would silently
+    win and the natives would vanish from the package. ContentWithTargetPath feeds only the copy machinery,
+    which is all that is wanted here, and it flows to referencing projects the same way an ordinary content
+    item does.
+  -->
+  <Target Name="CodeBrixVideoPlaybackDav1dStageNativeLibraries" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <ContentWithTargetPath Include="@(_Dav1dNativeLibrary)"
+                             TargetPath="runtimes\%(RecursiveDir)%(Filename)%(Extension)"
+                             CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+</Project>

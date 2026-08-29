@@ -164,7 +164,7 @@ USAGE
 
   Output, git-ignored (see ../output/README.txt):
     ../output/<rid>/libdav1d.so           stripped - the file the package ships
-    ../output/<rid>/LICENSE               dav1d's COPYING, verbatim
+    ../output/<rid>/LICENSE-Dav1d.txt               dav1d's COPYING, verbatim
     ../output/<rid>/BUILD-INFO.txt        toolchain, pins, sizes, sha256, glibc
                                           floor, conformance hashes
     ../output/<rid>/unstripped/libdav1d.so   for crash triage; never shipped
@@ -323,7 +323,7 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
        mkdir -p ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native
        cp ../output/<rid>/libdav1d.so \
           ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native/
-       cp ../output/<rid>/LICENSE \
+       cp ../output/<rid>/LICENSE-Dav1d.txt \
           ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native/
 
      <rid> is linux-x64, linux-arm64 or linux-riscv64. The LICENSE file is not

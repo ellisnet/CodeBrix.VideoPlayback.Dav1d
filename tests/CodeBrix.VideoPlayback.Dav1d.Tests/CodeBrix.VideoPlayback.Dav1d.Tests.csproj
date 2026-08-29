@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
+    <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.237.1200" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeBrix.VideoPlayback.Dav1d\CodeBrix.VideoPlayback.Dav1d.csproj" />
+  </ItemGroup>
+
+  <!--
+    The six conformance streams and their expected hashes are read straight out of
+    dav1d-native-tools/test-vectors, the same folder the native builds check themselves against. They are
+    linked rather than copied so there is exactly one set of them in the repository and the managed binding
+    and the native builds can never drift on to different vectors.
+  -->
+  <ItemGroup>
+    <Content Include="..\..\dav1d-native-tools\test-vectors\*.ivf;..\..\dav1d-native-tools\test-vectors\EXPECTED.md5">
+      <Link>test-vectors\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!--
+    End-to-end playback assets, generated locally by tests/assets/generate-assets.sh from FFmpeg's synthetic
+    lavfi sources - see tests/assets/ASSETS.txt. Never third-party media.
+  -->
+  <ItemGroup>
+    <Content Include="..\assets\*.webm;..\assets\*.mkv;..\assets\*.ivf;..\assets\*.txt">
+      <Link>assets\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

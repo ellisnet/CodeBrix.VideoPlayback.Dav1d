@@ -175,8 +175,8 @@ echo "  unstripped: $SIZE_UNSTRIPPED bytes -> stripped: $SIZE_STRIPPED bytes"
 # other materials provided with the distribution" - is satisfied by shipping dav1d's own COPYING
 # beside every binary. This is the step that puts it there; the package's runtimes/<rid>/native/
 # folder is a straight copy of this directory.
-cp "$SRC/COPYING" "$OUT/LICENSE"
-echo "  LICENSE   : dav1d COPYING copied beside the binary"
+cp "$SRC/COPYING" "$OUT/LICENSE-Dav1d.txt"
+echo "  LICENSE-Dav1d.txt   : dav1d COPYING copied beside the binary"
 echo
 
 # ----------------------------------------------------------------------------------------------
@@ -399,7 +399,7 @@ SHA256           : $SHA
 SHA256 unstripped: $SHA_UNSTRIPPED
 glibc floor      : ${GLIBC_FLOOR} (allowed <= ${GLIBC_MAX:-n/a})
 Dynamic deps     : $(printf '%s ' $DEPS)
-Licence beside it: LICENSE (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
+Licence beside it: LICENSE-Dav1d.txt (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
 
 Conformance (dav1d CLI built from this same source, --muxer md5)
 ------------------------------------------------------------------------------$CONFORMANCE_SUMMARY

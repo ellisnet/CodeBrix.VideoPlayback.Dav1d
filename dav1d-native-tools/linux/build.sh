@@ -252,7 +252,7 @@ echo
 echo "=============================================================================="
 echo " Outputs are in dav1d-native-tools/output/<rid>/"
 echo "   libdav1d.so        stripped, the file the package ships"
-echo "   LICENSE            dav1d's COPYING, shipped beside it (BSD-2-Clause clause 2)"
+echo "   LICENSE-Dav1d.txt            dav1d's COPYING, shipped beside it (BSD-2-Clause clause 2)"
 echo "   BUILD-INFO.txt     toolchain, pins, sizes, sha256, glibc floor, conformance"
 echo "   unstripped/        keep for crash triage; never shipped"
 echo " Compressed copies:  output/staging/<rid>/libdav1d.so.xz"

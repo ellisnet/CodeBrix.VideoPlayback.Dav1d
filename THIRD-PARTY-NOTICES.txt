@@ -23,7 +23,7 @@ HOW BSD-2-CLAUSE CLAUSE 2 IS SATISFIED
     Clause 2 requires a binary distribution to reproduce the copyright notice
     and the licence "in the documentation and/or other materials provided with
     the distribution". Every build script in dav1d-native-tools/ copies dav1d's
-    own COPYING file into its output folder as LICENSE, and the adoption step
+    own COPYING file into its output folder as LICENSE-Dav1d.txt, and the adoption step
     copies it into runtimes/<rid>/native/ beside the binary. So the licence text
     physically travels inside the NuGet package, next to every native library,
     on every platform - in addition to this file.

@@ -130,9 +130,9 @@ install_name_tool -id "@rpath/$LIB_NAME" "$OUT/$LIB_NAME"
 # what makes the x64 slice loadable at all on a modern Mac. The gate checks it took.
 codesign --force --sign - "$OUT/$LIB_NAME"
 
-cp "$SRC_DIR/COPYING" "$OUT/LICENSE"
+cp "$SRC_DIR/COPYING" "$OUT/LICENSE-Dav1d.txt"
 echo "  unstripped: $SIZE_UNSTRIPPED bytes -> stripped: $SIZE_STRIPPED bytes"
-echo "  LICENSE   : dav1d COPYING copied beside the binary"
+echo "  LICENSE-Dav1d.txt   : dav1d COPYING copied beside the binary"
 echo
 
 # ----------------------------------------------------------------------------------------------
@@ -200,7 +200,7 @@ Size (unstripped): $SIZE_UNSTRIPPED bytes -> unstripped/$LIB_NAME
 Debug symbols    : $LIB_NAME.dSYM (not shipped)
 SHA256           : $SHA
 Signature        : ad-hoc (codesign --sign -) - the linker does NOT sign x86_64 output
-Licence beside it: LICENSE (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
+Licence beside it: LICENSE-Dav1d.txt (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
 
 Conformance (dav1d CLI built from this same source, --muxer md5)
 ------------------------------------------------------------------------------$CONFORMANCE_SUMMARY

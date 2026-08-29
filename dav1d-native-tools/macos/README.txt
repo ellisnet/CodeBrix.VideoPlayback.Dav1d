@@ -116,7 +116,7 @@ USAGE
     ../output/<rid>/libdav1d.dylib.dSYM     debug symbols - macOS's equivalent
                                             of an unstripped copy. NOT shipped.
     ../output/<rid>/unstripped/libdav1d.dylib   the pre-strip binary
-    ../output/<rid>/LICENSE                 dav1d's COPYING, verbatim
+    ../output/<rid>/LICENSE-Dav1d.txt                 dav1d's COPYING, verbatim
     ../output/<rid>/BUILD-INFO.txt          toolchain, pins, sizes, sha256,
                                             deployment target, conformance
     ../output/staging/<rid>/libdav1d.dylib.gz
@@ -342,7 +342,7 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
        mkdir -p ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native
        cp ../output/<rid>/libdav1d.dylib \
           ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native/
-       cp ../output/<rid>/LICENSE \
+       cp ../output/<rid>/LICENSE-Dav1d.txt \
           ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native/
 
      <rid> is osx-arm64 or osx-x64. The LICENSE file is not optional:
@@ -374,7 +374,7 @@ described above and re-verified after the copy (arch, install name, minos 11.0,
       1,679,264 bytes   (LC_UUID variant - see WHAT HAS AND HAS NOT BEEN
                          VERIFIED; the other variant is equally valid)
 
-with dav1d's COPYING beside each one as LICENSE. Copying preserves the ad-hoc
+with dav1d's COPYING beside each one as LICENSE-Dav1d.txt. Copying preserves the ad-hoc
 signature - verified with `codesign -v` after the copy, which is worth repeating
 whenever these files are moved between machines, because some transports do not.
 

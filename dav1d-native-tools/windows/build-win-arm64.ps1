@@ -34,7 +34,7 @@
 #     .\build-win-arm64.ps1                        # on an ARM64 Windows machine
 #     .\build-win-arm64.ps1 -Route CrossFromX64    # on an x64 Windows machine
 #
-# Output: ..\output\win-arm64\  (dav1d.dll, dav1d.pdb, LICENSE, BUILD-INFO.txt, SHA256SUMS.txt)
+# Output: ..\output\win-arm64\  (dav1d.dll, dav1d.pdb, LICENSE-Dav1d.txt, BUILD-INFO.txt, SHA256SUMS.txt)
 # =============================================================================================
 
 [CmdletBinding()]
@@ -195,8 +195,8 @@ else {
     Write-Host '  [warn] no dav1d.pdb was produced - a crash dump from this build will be unreadable.'
 }
 
-Copy-Item -LiteralPath (Join-Path $sourceDir 'COPYING') -Destination (Join-Path $outDir 'LICENSE')
-Write-Host '  LICENSE  : dav1d COPYING copied beside the binary'
+Copy-Item -LiteralPath (Join-Path $sourceDir 'COPYING') -Destination (Join-Path $outDir 'LICENSE-Dav1d.txt')
+Write-Host '  LICENSE-Dav1d.txt  : dav1d COPYING copied beside the binary'
 Write-Host ''
 
 # ---------------------------------------------------------------------------------------------
@@ -295,7 +295,7 @@ File             : dav1d.dll
 Size             : $((Get-Item -LiteralPath $dllPath).Length) bytes
 SHA256           : $sha
 Debug symbols    : $debugSymbols
-Licence beside it: LICENSE (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
+Licence beside it: LICENSE-Dav1d.txt (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
 
 Conformance (dav1d.exe built from this same source, --muxer md5)
 ------------------------------------------------------------------------------

@@ -1,0 +1,73 @@
+================================================================================
+tests/assets - the end-to-end playback assets
+================================================================================
+
+WHAT THESE ARE
+--------------------------------------------------------------------------------
+Three short WebM files, each carrying AV1 video, used by the tests that play a
+whole file through a VideoPlaybackSession rather than driving the decoder
+directly.
+
+They are NOT the conformance vectors. Those live in
+dav1d-native-tools/test-vectors, they are bare IVF bitstreams, and they answer
+the question "does this binding decode the same pictures dav1d does". These files
+answer a different one: "does a real container, a real demuxer, a real clock and
+a real presenter play a real file once the dav1d decoder has been registered".
+
+PROVENANCE: THESE ARE NOT THIRD-PARTY CONTENT
+--------------------------------------------------------------------------------
+Every file was encoded here, on 2026-08-29, from ffmpeg lavfi SYNTHETIC
+GENERATORS - testsrc2 for the picture and sine for the sound - by
+generate-assets.sh in this folder. There is no camera footage, no music, no
+sample clip, nothing downloaded and nothing anyone else holds a copyright in.
+They are original content of this repository, covered by the repository's own
+licence, and they are deliberately NOT listed in THIRD-PARTY-NOTICES.txt,
+because listing them there would be a false statement about their origin.
+
+The files are COMMITTED, so the test suite does not require ffmpeg and no build
+step generates them. generate-assets.sh is re-run only to change what they hold;
+it is the authoritative record of how they were made, because it is code and so
+cannot drift from what was actually run the way a prose list can.
+
+THE THREE FILES
+--------------------------------------------------------------------------------
+All three are 160x96, 8-bit 4:2:0, 24 frames at 12 frames per second - two
+seconds - encoded with libaom-av1 at crf 40, with the cues written before the
+first cluster so the container opens without seeking to the end.
+
+  file                    audio track          what it is for
+  ----------------------  -------------------  ----------------------------------
+  av1-opus.webm           Opus, 48 kHz mono    The ordinary case: a two-track
+                                               WebM of the kind an application
+                                               will actually be handed. Played
+                                               with PlayAudio = false, so the
+                                               test needs no audio device and no
+                                               Opus package - the point being the
+                                               video path through the session.
+  av1-vorbis.webm         Vorbis, 48 kHz mono  The audible variant. Vorbis is
+                                               decoded by CodeBrix.Audio itself,
+                                               so this plays with sound without
+                                               this repository having to depend on
+                                               the Opus package for a test.
+  av1-video-only.webm     none                 A session with nothing to
+                                               synchronise to, running on its own
+                                               monotonic clock.
+
+THE AUDIBLE TEST IS OPT-IN
+--------------------------------------------------------------------------------
+The test that actually opens the sound device runs only when
+
+    CODEBRIX_AUDIO_RUN_PLAYBACK_TESTS=1
+
+is set in the environment. Without it the test is skipped with a message saying
+so. That is the family's convention for anything that needs real hardware: a
+headless machine, a container, or a laptop with the speakers muted must be able
+to run the whole suite green, and a test that silently passes because there was
+no device would be worse than no test at all.
+
+FILES
+--------------------------------------------------------------------------------
+  ASSETS.txt             this document
+  generate-assets.sh     the exact ffmpeg commands, as code
+  *.webm                 the three files
+================================================================================

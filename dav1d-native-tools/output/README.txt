@@ -24,7 +24,7 @@ platform produced them:
 
   <rid>/<library>              the file the package ships. Unversioned:
                                libdav1d.so, libdav1d.dylib or dav1d.dll
-  <rid>/LICENSE                dav1d's COPYING, verbatim. Ships WITH the binary -
+  <rid>/LICENSE-Dav1d.txt                dav1d's COPYING, verbatim. Ships WITH the binary -
                                BSD-2-Clause clause 2 requires it
   <rid>/BUILD-INFO.txt         toolchain, pins, sizes, sha256, deployment target
                                and the conformance results for that build. This

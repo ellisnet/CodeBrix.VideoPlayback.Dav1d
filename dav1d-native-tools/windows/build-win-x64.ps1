@@ -12,7 +12,7 @@
 #     cd dav1d-native-tools\windows
 #     .\build-win-x64.ps1
 #
-# Output: ..\output\win-x64\  (dav1d.dll, dav1d.pdb, LICENSE, BUILD-INFO.txt, SHA256SUMS.txt)
+# Output: ..\output\win-x64\  (dav1d.dll, dav1d.pdb, LICENSE-Dav1d.txt, BUILD-INFO.txt, SHA256SUMS.txt)
 #
 # It installs nothing. Anything missing is named, with the command that installs it, and the
 # script stops.
@@ -126,8 +126,8 @@ else {
 }
 
 # BSD-2-Clause clause 2 is satisfied by shipping dav1d's own COPYING beside the binary.
-Copy-Item -LiteralPath (Join-Path $sourceDir 'COPYING') -Destination (Join-Path $outDir 'LICENSE')
-Write-Host '  LICENSE  : dav1d COPYING copied beside the binary'
+Copy-Item -LiteralPath (Join-Path $sourceDir 'COPYING') -Destination (Join-Path $outDir 'LICENSE-Dav1d.txt')
+Write-Host '  LICENSE-Dav1d.txt  : dav1d COPYING copied beside the binary'
 Write-Host ''
 
 # ---------------------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ File             : dav1d.dll
 Size             : $((Get-Item -LiteralPath $dllPath).Length) bytes
 SHA256           : $sha
 Debug symbols    : $debugSymbols
-Licence beside it: LICENSE (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
+Licence beside it: LICENSE-Dav1d.txt (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
 
 Conformance (dav1d.exe built from this same source, --muxer md5)
 ------------------------------------------------------------------------------

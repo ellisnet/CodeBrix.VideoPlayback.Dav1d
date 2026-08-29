@@ -17,7 +17,7 @@ Common to every entry below
   dav1d version   : 1.5.4  (git describe 1.5.4-1-g52b9d3d3)
   dav1d commit    : 52b9d3d3ec525f5a20849145fa0e879d585f4911
   API version     : 7.0.0  -> soname libdav1d.so.7
-  Licence         : BSD-2-Clause (dav1d/COPYING, shipped as LICENSE beside every
+  Licence         : BSD-2-Clause (dav1d/COPYING, shipped as LICENSE-Dav1d.txt beside every
                     binary; see ../THIRD-PARTY-NOTICES.txt)
   Patches applied : NONE. The vendored source is unmodified upstream.
   meson options   : --buildtype=release -Ddefault_library=shared -Dbitdepths=8,16
@@ -201,7 +201,7 @@ Gate             : architecture ok (8664/x64), 17/17 exports, system-only
                    dependencies, LoadLibrary smoke test passed (API 7.0.0,
                    decoder opened and closed), 7/7 conformance decodes matched
 Adopted into runtimes/win-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE
+                   beside it as LICENSE-Dav1d.txt
 
 Note             : the conformance step failed on the very first attempt for a
                    reason that had nothing to do with this binary - the CLI was
@@ -262,7 +262,7 @@ To finish it     : output/staging/win-arm64/win-arm64-gate.zip holds this DLL an
                    follow windows/README.txt.
 
 Adopted into runtimes/win-arm64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE - ADOPTED WITH THE GATE INCOMPLETE, as a
+                   beside it as LICENSE-Dav1d.txt - ADOPTED WITH THE GATE INCOMPLETE, as a
                    deliberate decision, so the package has an ARM64 slice while
                    verification is outstanding. If the checks fail on hardware,
                    this binary must be pulled from runtimes/.
@@ -301,7 +301,7 @@ Gate             : architecture ok, 17/17 exports, install name ok, system-only
                    (API 7.0.0, decoder opened and closed), 7/7 conformance
                    decodes matched
 Adopted into runtimes/osx-arm64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE; signature re-verified after the copy
+                   beside it as LICENSE-Dav1d.txt; signature re-verified after the copy
 
 
 ================================================================================
@@ -355,4 +355,4 @@ Gate             : architecture ok, 17/17 exports, install name ok, system-only
                    under Rosetta (API 7.0.0, decoder opened and closed), 7/7
                    conformance decodes matched
 Adopted into runtimes/osx-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE; signature re-verified after the copy
+                   beside it as LICENSE-Dav1d.txt; signature re-verified after the copy
