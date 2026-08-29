@@ -2,7 +2,9 @@
 # crossfile-win-arm64.txt - meson cross file for building win-arm64 ON AN x64 WINDOWS HOST
 # =============================================================================================
 #
-#   >>> UNVERIFIED. Written on Linux, 2026-08-28; never run. <<<
+#   USED FOR REAL ON 2026-08-29 and it works - but only after three corrections, two of which
+#   are documented at length below. Written on Linux 2026-08-28; the version that was written
+#   there did NOT build. Read the comments before changing anything here.
 #
 # ONLY needed for the cross route:  .\build-win-arm64.ps1 -Route CrossFromX64
 # The native route (running on an ARM64 Windows machine) needs no cross file at all - meson
@@ -21,6 +23,47 @@
 # linker are on PATH; this file only says which compiler to invoke and what to target.
 # =============================================================================================
 
+# THIS FILE IS NOT SUFFICIENT ON ITS OWN: build-win-arm64.ps1 also sets the CL environment
+# variable to --target=aarch64-pc-windows-msvc before invoking meson, and the cross build does NOT
+# work without it. Both halves were established on the first real run, 2026-08-29; the reasoning
+# is worth keeping, because the obvious simplifications each break something.
+#
+# WHY CL, AND NOT JUST c_args
+#   meson picks the /MACHINE: flag it hands the static linker (llvm-lib) from the target it
+#   DETECTS, and it detects that by running the compiler bare and reading its "Target:" banner.
+#   A --target in c_args reaches compilation but not that probe, so an x64-hosted clang-cl -
+#   which reports Target: x86_64-pc-windows-msvc on its own - produced correct arm64 objects and
+#   then tried to archive them with /MACHINE:x64:
+#
+#       input_input.c.obj: file machine type arm64 conflicts with library machine type x64
+#
+#   clang-cl honours MSVC's CL environment variable, so setting CL makes the probe itself report
+#   an AArch64 target, and meson then emits /MACHINE:arm64.
+#
+# WHY aarch64-pc-windows-msvc AND NOT arm64-pc-windows-msvc
+#   The two are the same target to clang, which echoes back whichever spelling it was given. They
+#   are NOT the same to meson. meson canonicalises the detected triple with an if/elif chain that
+#   tests for the literal substring 'aarch64' BEFORE it tests for 'arm':
+#
+#       'x86_64' -> x64 ;  '86' -> x86 ;  'aarch64' -> arm64 ;  'arm' -> arm
+#
+#   'arm64-pc-windows-msvc' contains no 'aarch64', so it falls through to the 32-bit arm branch
+#   and meson emits /machine:arm - which fails exactly like the x64 case did, just with a
+#   different wrong answer:
+#
+#       input_input.c.obj: file machine type arm64 conflicts with library machine type arm
+#
+#   Spelling it aarch64 hits the correct branch. Do not "tidy" this to arm64.
+#
+# WHY NOT PUT --target IN THE BINARY ENTRY INSTEAD
+#   c = ['clang-cl', '--target=...'] also fixes the probe, and was tried first. It breaks the
+#   Windows resource compiler: meson invokes it through a wrapper that takes ONE value for --cl,
+#   so the second element leaks past it and reaches rc.exe as a positional argument -
+#
+#       fatal error RC1106: invalid option: --target=aarch64-pc-windows-msvc
+#
+#   - which kills the build at src/dav1d.rc. The exelist must stay a single binary. CL carries
+#   the target instead, and reaches the compiler for every invocation including that wrapper's.
 [binaries]
 c = 'clang-cl'
 cpp = 'clang-cl'
@@ -33,8 +76,17 @@ cpu_family = 'aarch64'
 cpu = 'aarch64'
 endian = 'little'
 
+# These state the target explicitly for compilation. CL (set by build-win-arm64.ps1) would carry
+# it anyway, so they are belt and braces - but they keep the intent visible in the file itself
+# rather than only in an environment variable set somewhere else.
+#
+# There are deliberately NO c_link_args / cpp_link_args here. meson hands link arguments straight
+# to lld-link, which is a linker rather than a compiler driver and does not understand --target:
+#
+#     lld-link: warning: ignoring unknown argument '--target=aarch64-pc-windows-msvc'
+#
+# Harmless, but it is noise in every build log that says nothing true. The link gets its
+# architecture from /MACHINE:arm64 and from the objects themselves.
 [built-in options]
-c_args = ['--target=arm64-pc-windows-msvc']
-cpp_args = ['--target=arm64-pc-windows-msvc']
-c_link_args = ['--target=arm64-pc-windows-msvc']
-cpp_link_args = ['--target=arm64-pc-windows-msvc']
+c_args = ['--target=aarch64-pc-windows-msvc']
+cpp_args = ['--target=aarch64-pc-windows-msvc']

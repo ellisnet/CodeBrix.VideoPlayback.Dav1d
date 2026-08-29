@@ -2,10 +2,10 @@
 # build-win-x64.ps1 - build dav1d.dll for the win-x64 runtime identifier
 # =============================================================================================
 #
-#   >>> NOT YET EXECUTED ON WINDOWS. <<<
-#   Written on Linux on 2026-08-28 from dav1d's own meson.build and documentation, and never
-#   run on a Windows machine. Read README.txt, "WHAT HAS AND HAS NOT BEEN VERIFIED", first.
-#   When you run it, fix what is wrong HERE rather than working around it by hand.
+#   FIRST RUN 2026-08-29: BUILT AND PASSED THE COMPLETE GATE on Windows 11 Pro x64 with
+#   Visual Studio Professional 2026 (18.9). One fix was needed and is in build-common.ps1:
+#   the conformance CLI was loading an unrelated dav1d.dll from PATH. See README.txt.
+#   If you change something here, keep the fix rather than working around it by hand.
 #
 # USAGE (from any PowerShell prompt - the script sets up the compiler environment itself):
 #
@@ -157,6 +157,14 @@ Write-Host ''
 $sha = Get-Sha256 $dllPath
 $stopwatch.Stop()
 
+# Report what was actually produced. meson's --buildtype=release asks for no debug information,
+# so MSVC emits no .pdb - claiming one exists in the record would be a lie that only surfaces
+# years later when someone tries to read a crash dump. If symbols are ever wanted, build with
+# --buildtype=debugoptimized instead; that is a pins.env change and affects every platform.
+$pdbPath = Join-Path $outDir 'dav1d.pdb'
+$debugSymbols = if (Test-Path -LiteralPath $pdbPath) { 'dav1d.pdb beside it (not shipped)' }
+                else { 'none - meson --buildtype=release asks for no debug info, so link.exe produced no .pdb' }
+
 $buildInfo = @"
 dav1d native library - build information
 ==============================================================================
@@ -192,7 +200,7 @@ Result
 File             : dav1d.dll
 Size             : $((Get-Item -LiteralPath $dllPath).Length) bytes
 SHA256           : $sha
-Debug symbols    : dav1d.pdb beside it (not shipped)
+Debug symbols    : $debugSymbols
 Licence beside it: LICENSE (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
 
 Conformance (dav1d.exe built from this same source, --muxer md5)

@@ -34,8 +34,18 @@ Common to every entry below
                     60 signature bytes covering it), with every byte of code and
                     data identical. Cause and evidence: macos/README.txt, "WHAT
                     HAS AND HAS NOT BEEN VERIFIED". Do not treat an osx-x64 hash
-                    mismatch as a defect without checking that first; for every
-                    other RID the sha256 below is exact.
+                    mismatch as a defect without checking that first.
+                    NEITHER WINDOWS RID IS REPRODUCIBLE EITHER, for a plainer
+                    reason: link.exe stamps the wall clock into the image. Two
+                    win-x64 builds minutes apart differed in exactly 4 bytes of
+                    2,002,432 - the COFF TimeDateStamp at offset 272, the PE
+                    CheckSum at 352-353 that covers it, and the export
+                    directory's own timestamp at 1952788 - with all code and
+                    data identical. /Brepro would fix it and is deliberately not
+                    passed. So: the sha256 below is exact for the three linux-*
+                    RIDs and for osx-arm64, and is a record of one particular
+                    build for osx-x64, win-x64 and win-arm64. For those three,
+                    compare size and gate result, not the hash.
   Conformance     : all seven decodes in test-vectors/EXPECTED.md5 must match.
                     The expected hashes are architecture-independent, so the
                     same seven values appear under every RID below:
@@ -159,45 +169,103 @@ Adopted into runtimes/linux-riscv64/native/ : not yet
 
 
 ================================================================================
-win-x64                                                               NOT BUILT
+win-x64                                                            BUILT + PASSED
 ================================================================================
-No binary exists yet. windows/build-win-x64.ps1 was written on 2026-08-28 but
-has never been executed - see windows/README.txt.
-
-Built            : ----
+Built            : 2026-08-29 17:13 UTC
 Built by         : windows\build-win-x64.ps1
-Build host       : ----  (Windows x64; VS 2022 Build Tools, Python, meson, ninja,
-                   nasm - the exact versions go here)
-Compiler         : ----
-meson / ninja    : ----
-nasm             : ----
+Build host       : Windows 11 Pro 10.0.26200 (AMD64), Visual Studio Professional
+                   2026 (18.9.12120.119). First execution of these scripts on
+                   any Windows machine.
+Duration         : 28s
+Network          : not used - the vendored source, the conformance streams and
+                   the expected hashes are all in this repository
+Compiler         : cl 19.51.36256 (MSVC toolset 14.51.36231), link 14.51.36256.0
+meson / ninja    : 1.12.0 / 1.13.0
+nasm             : NASM 3.02 (compiled 2026-06-28) - the same major version used
+                   for osx-x64, and newer than the 2.15.03 used for linux-x64.
+                   Assembled dav1d's x86 SIMD without complaint.
+Windows SDK      : 10.0.26100
+CRT              : static (-Db_vscrt=static_from_buildtype), so no Visual C++
+                   Redistributable is required on a user's machine
+
 File             : dav1d.dll
-Size             : ----
-SHA256           : ----
-Dependents       : ----  (must be KERNEL32.dll only - no VC runtime)
-Gate             : ----
-Adopted into runtimes/win-x64/native/ : no
+Size             : 2,002,432 bytes
+SHA256           : 69c3e076a4990560e00e1bfc04b2bac111c96965ad39da2ea0d2ed5eeca4da10
+                   *** NOT REPRODUCIBLE - see Reproducibility above. A rebuild
+                   legitimately produces a different hash, differing in the four
+                   timestamp-derived bytes only. ***
+Debug symbols    : none. --buildtype=release asks for no debug info, so MSVC
+                   emitted no .pdb.
+Dependents       : KERNEL32.dll only - no VC runtime, as required
+Gate             : architecture ok (8664/x64), 17/17 exports, system-only
+                   dependencies, LoadLibrary smoke test passed (API 7.0.0,
+                   decoder opened and closed), 7/7 conformance decodes matched
+Adopted into runtimes/win-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
+                   beside it as LICENSE
+
+Note             : the conformance step failed on the very first attempt for a
+                   reason that had nothing to do with this binary - the CLI was
+                   loading an unrelated dav1d.dll (GStreamer's, API 6.8.0) from
+                   PATH and dying with 0xC0000139 before it decoded anything.
+                   build-common.ps1 now copies the staged DLL beside the CLI so
+                   that cannot happen. windows/README.txt, "THE PATH TRAP".
 
 
 ================================================================================
-win-arm64                                                             NOT BUILT
+win-arm64                                        BUILT - GATE INCOMPLETE, PENDING
 ================================================================================
-No binary exists yet. windows/build-win-arm64.ps1 was written on 2026-08-28 but
-has never been executed - see windows/README.txt.
+*** THIS ENTRY DOES NOT CLAIM A PASS. The binary was cross-built on x64 hardware
+*** and has NEVER BEEN EXECUTED. Three of the five gate checks ran and passed;
+*** the two that require running ARM64 code did not run at all. Unrun is not
+*** passed. Finish the gate on an ARM64 Windows machine and rewrite this entry
+*** with the result - windows/README.txt, "FINISHING A CROSS-BUILT win-arm64 ON
+*** ARM64 HARDWARE".
 
-Built            : ----
-Built by         : windows\build-win-arm64.ps1   (route: Native | CrossFromX64)
-Build host       : ----  (preferably an ARM64 Windows machine, so the gate can
-                   run what it built)
-Compiler         : ----  (clang-cl, from the "C++ Clang tools for Windows"
-                   component - not cl, which would need gas-preprocessor + Perl)
-meson / ninja    : ----
+Built            : 2026-08-29 17:11 UTC
+Built by         : windows\build-win-arm64.ps1   (route: CrossFromX64)
+Build host       : Windows 11 Pro 10.0.26200 (AMD64) - an x64 machine, NOT
+                   ARM64. Visual Studio Professional 2026 (18.9.12120.119).
+Duration         : 15s
+Network          : not used
+Compiler         : clang-cl 22.1.3 (Visual Studio's "C++ Clang tools for
+                   Windows"), targeting aarch64-pc-windows-msvc; linker
+                   lld-link 22.1.3
+meson / ninja    : 1.12.0 / 1.13.0
+nasm             : not used (x86 only)
+Windows SDK      : 10.0.26100
+AArch64 assembly : assembled by clang-cl directly. gas-preprocessor.pl and Perl
+                   were not involved, which was the point of choosing clang-cl.
+SIMD detected    : DOTPROD, I8MM, SVE and SVE2 all compiled, so the binary
+                   carries the full SIMD set rather than a baseline subset.
+CRT              : static (-Db_vscrt=static_from_buildtype)
+
 File             : dav1d.dll
-Size             : ----
-SHA256           : ----
-Dependents       : ----  (must be KERNEL32.dll only)
-Gate             : ----
-Adopted into runtimes/win-arm64/native/ : no
+Size             : 902,656 bytes
+SHA256           : 8bf89bcb9cea3b38d7348b5f615caa012d91ba6c796244bc85259106ddb55c51
+                   *** NOT REPRODUCIBLE - see Reproducibility above. ***
+Debug symbols    : none, as for win-x64
+Dependents       : KERNEL32.dll only - no VC runtime, as required
+
+Gate             : RAN AND PASSED
+                     - architecture ok (AA64/ARM64)
+                     - 17/17 required exports present
+                     - dependencies system-only (KERNEL32.dll)
+                   DID NOT RUN - an x64 host cannot execute ARM64 code
+                     - LoadLibrary smoke test
+                     - 7 conformance decodes
+                   The script exits 1 for this reason and that is its designed
+                   behaviour on the cross route, not a failure of the binary.
+
+To finish it     : output/staging/win-arm64/win-arm64-gate.zip holds this DLL and
+                   the ARM64 dav1d.exe built from the same source, which is what
+                   the conformance decodes need. Carry it to ARM64 hardware and
+                   follow windows/README.txt.
+
+Adopted into runtimes/win-arm64/native/ : YES, 2026-08-29, with dav1d's COPYING
+                   beside it as LICENSE - ADOPTED WITH THE GATE INCOMPLETE, as a
+                   deliberate decision, so the package has an ARM64 slice while
+                   verification is outstanding. If the checks fail on hardware,
+                   this binary must be pulled from runtimes/.
 
 
 ================================================================================

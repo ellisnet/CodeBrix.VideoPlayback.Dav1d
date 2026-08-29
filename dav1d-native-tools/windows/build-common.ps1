@@ -2,12 +2,11 @@
 # build-common.ps1 - shared machinery for the Windows dav1d builds
 # =============================================================================================
 #
-#   >>> NOT YET EXECUTED ON WINDOWS. <<<
-#   This file, build-win-x64.ps1 and build-win-arm64.ps1 were written on Linux on 2026-08-28,
-#   from dav1d's own meson.build and documentation. They have never been run on a Windows
-#   machine. Read README.txt, section "WHAT HAS AND HAS NOT BEEN VERIFIED", before trusting
-#   any of it - and when you do run it, fix what is wrong here rather than working around it
-#   by hand, so the next person gets a script that works.
+#   FIRST RUN 2026-08-29 on Windows 11 Pro x64, Visual Studio Professional 2026 (18.9).
+#   win-x64 passed the complete gate; win-arm64 cross-built and passed every check an x64 host
+#   can run. The conformance step needed a real fix and it is marked in place below - the CLI
+#   must decode with the DLL this build produced, not whichever dav1d.dll happens to be on
+#   PATH. Read README.txt, "WHAT THE FIRST REAL RUN ESTABLISHED", before editing.
 #
 # Dot-source this from an architecture script; do not run it directly.
 #
@@ -341,7 +340,25 @@ function Test-Dav1dBinary {
         Add-GateFail 'conformance NOT RUN - the built dav1d.exe cannot execute on this machine. Run it on the target hardware before shipping.'
     }
     else {
+        # THE CLI MUST DECODE WITH THE DLL WE JUST BUILT, NOT WHATEVER IS ON PATH.
+        #
+        # meson puts dav1d.dll in <build>\src but dav1d.exe in <build>\tools, so nothing sits
+        # beside the executable and Windows' DLL search falls through to PATH. That is not
+        # hypothetical: on the machine this was first run on (2026-08-29), GStreamer was on PATH
+        # shipping its own dav1d.dll at API 6.8.0. The API-7 CLI asked it for entry points it did
+        # not have and died with 0xC0000139 STATUS_ENTRYPOINT_NOT_FOUND before reaching main, so
+        # every decode returned an EMPTY string and the gate reported seven hash mismatches that
+        # had nothing to do with the binary being tested.
+        #
+        # Copying the STAGED dll (the exact file the package ships) next to the CLI fixes it for
+        # good: the executable's own directory is first in the default search order and cannot be
+        # displaced by PATH. Do not replace this with a PATH edit - PATH is what caused the bug.
+        $cliDir = Split-Path -Parent $CliPath
+        Copy-Item -LiteralPath $DllPath -Destination (Join-Path $cliDir 'dav1d.dll') -Force
+        Write-Host "  staged dll copied beside the CLI so PATH cannot supply a different dav1d.dll"
+
         $checked = 0
+        $passed = 0
         foreach ($line in Get-Content -LiteralPath $ExpectedFile) {
             $trimmed = $line.Trim()
             if ($trimmed -eq '' -or $trimmed.StartsWith('#')) { continue }
@@ -356,10 +373,23 @@ function Test-Dav1dBinary {
                 continue
             }
             $got = (& $CliPath -i $vectorPath --muxer md5 -o - @flags 2>$null | Out-String).Trim()
+            $cliExit = $LASTEXITCODE
             $checked++
             if ($got -eq $want) {
+                $passed++
                 Write-Host "    [ok]   $vector ($($fields[1])) $got"
                 $summary.Add("  $vector ($($fields[1])) = $got")
+            }
+            elseif ($got -eq '') {
+                # No output at all means the CLI did not decode - it failed to START. Say so,
+                # rather than reporting it as a hash mismatch: the two have completely different
+                # causes and sending someone hunting for a decoder bug is a waste of a day.
+                # 0xC0000139 is STATUS_ENTRYPOINT_NOT_FOUND, 0xC0000135 STATUS_DLL_NOT_FOUND -
+                # both mean the wrong dav1d.dll was loaded.
+                Add-GateFail ("conformance: $vector ($($fields[1])) produced NO OUTPUT - the CLI exited with " +
+                              ("0x{0:X8}" -f [uint32]($cliExit -band 0xFFFFFFFF)) +
+                              " without decoding. This is a launch failure, not a wrong hash.")
+                $summary.Add("  $vector ($($fields[1])) = <no output, CLI exit 0x$('{0:X8}' -f [uint32]($cliExit -band 0xFFFFFFFF))>   *** EXPECTED $want ***")
             }
             else {
                 Add-GateFail "conformance: $vector ($($fields[1])) decoded to $got, expected $want"
@@ -367,7 +397,8 @@ function Test-Dav1dBinary {
             }
         }
         if ($checked -eq 0) { Add-GateFail 'the expected-hash file contained no usable entries' }
-        else { Add-GatePass "$checked conformance decodes checked" }
+        elseif ($passed -eq $checked) { Add-GatePass "$passed/$checked conformance decodes matched" }
+        else { Write-Host "  [FAIL] only $passed of $checked conformance decodes matched" }
     }
 
     return $summary

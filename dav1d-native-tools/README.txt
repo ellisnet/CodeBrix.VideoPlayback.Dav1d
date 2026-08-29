@@ -84,15 +84,23 @@ WHICH README TO READ
 Each one lists the tools to install on that machine, with the exact command,
 and nothing else is needed.
 
-  >>> As of 2026-08-29 the three LINUX and both macOS builds have been run and
-      have passed their gates. The macOS scripts were written on Linux and had
-      never been executed on a Mac; on their first real run both slices built
-      clean and needed no fix. macos/README.txt now records what that run
-      established, including one finding worth knowing about: osx-x64 is
-      reproducible only up to its LC_UUID.
+  >>> As of 2026-08-29 SIX of the seven slices have been built and have passed
+      their gates: the three LINUX, both macOS, and win-x64.
 
-      The WINDOWS scripts have still never been executed. windows/README.txt
-      says so at the top and lists exactly which assumptions are unverified. <<<
+      The macOS scripts were written on Linux and had never been executed on a
+      Mac; on their first real run both slices built clean and needed no fix.
+      macos/README.txt records what that run established, including one finding
+      worth knowing about: osx-x64 is reproducible only up to its LC_UUID.
+
+      The WINDOWS scripts were also written on Linux, and were run for the first
+      time later the same day. They needed four fixes, which are in the scripts
+      now. win-x64 passed the complete gate. win-arm64 was CROSS-BUILT from the
+      same x64 machine and passed every check an x64 host can perform, but its
+      smoke test and conformance decodes are UNRUN - not passed - because x64
+      hardware cannot execute ARM64 code; it is pending verification on an ARM64
+      machine. windows/README.txt records all of it, and note one finding that
+      applies to any Windows build: win-x64 is NOT byte-reproducible, because
+      link.exe stamps a timestamp into the image. <<<
 
 
 THE SEVEN RUNTIME IDENTIFIERS
@@ -107,9 +115,12 @@ THE SEVEN RUNTIME IDENTIFIERS
   osx-arm64       macos/build-osx-arm64.sh              libdav1d.dylib
   osx-x64         macos/build-osx-x64.sh                libdav1d.dylib
 
-Built and adopted so far: osx-arm64 and osx-x64 (2026-08-29). Built but not yet
-adopted: linux-x64, linux-arm64, linux-riscv64. Not yet built: win-x64,
-win-arm64. BUILD-PROVENANCE.txt is the authoritative per-RID record.
+Built and adopted so far: osx-arm64, osx-x64, win-x64 and win-arm64
+(2026-08-29) - but win-arm64 was adopted with its gate deliberately INCOMPLETE,
+pending verification on ARM64 hardware, and BUILD-PROVENANCE.txt says so in
+those words. Built but not yet adopted: linux-x64, linux-arm64, linux-riscv64.
+All seven are now built. BUILD-PROVENANCE.txt is the authoritative per-RID
+record.
 
 All seven names are UNVERSIONED on purpose: LibraryImport("dav1d") on .NET
 probes for exactly those names and does not follow sonames. The soname
