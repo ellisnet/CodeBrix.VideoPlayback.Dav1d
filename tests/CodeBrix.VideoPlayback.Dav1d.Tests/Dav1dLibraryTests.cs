@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using CodeBrix.VideoPlayback.Dav1d.Interop;
@@ -82,35 +82,41 @@ public class Dav1dLibraryTests
     public void The_loader_probes_the_application_folder_and_then_the_runtimes_folder()
     {
         //Arrange
-        string[] directories = { "/somewhere/app", "/somewhere/else" };
+        string fileName = Dav1dLibrary.NativeFileName;
+        string identifier = Dav1dLibrary.RuntimeIdentifier;
+        string first = MissingDirectory("somewhere", "app");
+        string second = MissingDirectory("somewhere", "else");
+        string[] directories = { first, second };
 
         //Act
-        IReadOnlyList<string> probed =
-            Dav1dLibrary.EnumerateProbePaths(directories, "linux-x64", "libdav1d.so");
+        IReadOnlyList<string> probed = Dav1dLibrary.EnumerateProbePaths(directories, identifier, fileName);
 
         //Assert
         probed.Count.Should().Be(4);
-        probed[0].Should().Be(Path.Combine("/somewhere/app", "libdav1d.so"));
-        probed[1].Should().Be(Path.Combine("/somewhere/app", "runtimes", "linux-x64", "native", "libdav1d.so"));
-        probed[2].Should().Be(Path.Combine("/somewhere/else", "libdav1d.so"));
-        probed[3].Should().Be(Path.Combine("/somewhere/else", "runtimes", "linux-x64", "native", "libdav1d.so"));
+        probed[0].Should().Be(Path.Combine(first, fileName));
+        probed[1].Should().Be(Path.Combine(first, "runtimes", identifier, "native", fileName));
+        probed[2].Should().Be(Path.Combine(second, fileName));
+        probed[3].Should().Be(Path.Combine(second, "runtimes", identifier, "native", fileName));
     }
 
     [Fact]
     public void A_missing_native_is_reported_with_every_path_that_was_tried()
     {
         //Arrange
-        string[] directories = { "/no/such/application/folder" };
+        string fileName = Dav1dLibrary.NativeFileName;
+        string identifier = Dav1dLibrary.RuntimeIdentifier;
+        string folder = MissingDirectory("no", "such", "application", "folder");
+        string[] directories = { folder };
 
         //Act
-        string message = Dav1dLibrary.DescribeLoadFailure(directories, "linux-riscv64", "libdav1d.so");
+        string message = Dav1dLibrary.DescribeLoadFailure(directories, identifier, fileName);
 
         //Assert
-        message.Should().Contain("/no/such/application/folder/libdav1d.so");
-        message.Should().Contain(
-            Path.Combine("/no/such/application/folder", "runtimes", "linux-riscv64", "native", "libdav1d.so"));
+        message.Should().Contain($"looked for '{fileName}'");
+        message.Should().Contain(Path.Combine(folder, fileName));
+        message.Should().Contain(Path.Combine(folder, "runtimes", identifier, "native", fileName));
         message.Should().Contain("operating system's own search path");
-        message.Should().Contain("runtimes/linux-riscv64/native/");
+        message.Should().Contain("runtimes/" + identifier + "/native/");
     }
 
     [Fact]
@@ -137,5 +143,19 @@ public class Dav1dLibraryTests
 
         //Assert
         fileName.Should().Be(expected);
+    }
+
+    /// <summary>
+    /// An absolute directory that exists on no machine, spelled the way the platform running the test spells
+    /// paths - so the probe paths the loader builds with <see cref="Path.Combine(string, string)" /> can be
+    /// compared against it on Windows as well as on Linux and macOS.
+    /// </summary>
+    /// <param name="segments">The folder names, outermost first.</param>
+    /// <returns>The rooted directory path.</returns>
+    private static string MissingDirectory(params string[] segments)
+    {
+        string root = Path.GetPathRoot(AppContext.BaseDirectory);
+        if (string.IsNullOrEmpty(root)) root = Path.DirectorySeparatorChar.ToString();
+        return Path.Combine(root, Path.Combine(segments));
     }
 }
