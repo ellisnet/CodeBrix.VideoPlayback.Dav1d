@@ -75,7 +75,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CodeBrix.VideoPlayback.MitLicenseForever" Version="1.0.241.1343" />
+    <PackageReference Include="CodeBrix.VideoPlayback.MitLicenseForever" Version="1.0.242.419" />
   </ItemGroup>
 
   <ItemGroup>
@@ -130,9 +130,7 @@
   -->
   <Target Name="CodeBrixVideoPlaybackDav1dStageNativeLibraries" BeforeTargets="AssignTargetPaths">
     <ItemGroup>
-      <ContentWithTargetPath Include="@(_Dav1dNativeLibrary)"
-                             TargetPath="runtimes\%(RecursiveDir)%(Filename)%(Extension)"
-                             CopyToOutputDirectory="PreserveNewest" />
+      <ContentWithTargetPath Include="@(_Dav1dNativeLibrary)" TargetPath="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
 
