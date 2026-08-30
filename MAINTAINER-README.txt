@@ -5,17 +5,30 @@ consumers, who want AGENT-README.txt instead
 ================================================================================
 
 
-⚠️ THE PIN IS PUBLISHED AND THIS PACKAGE IS PUBLISHABLE (2026-08-29)
+⚠️ THE PIN: THIS PACKAGE BUILDS AGAINST A PUBLISHED CodeBrix.VideoPlayback
 ================================================================================
-The package reference in src/CodeBrix.VideoPlayback.Dav1d.csproj points at the
-PUBLISHED CodeBrix.VideoPlayback.MitLicenseForever 1.0.241.1343 (published
-together with CodeBrix.VideoPlayback.Skia.MitLicenseForever on one version, as
-one event, on 2026-08-29). The pin was raised from the local pre-publish pack
-(1.0.241.1148) the same day, and proven real: `dotnet restore --force` with
-`-p:RestoreSources="https://api.nuget.org/v3/index.json"` (nuget.org alone, no
-folder feed) resolves 1.0.241.1343, and obj/project.assets.json lists no local
-source; build 0 warnings, 90/90 tests, and the packed nuspec declares the
-published version as the one dependency.
+The package reference in src/CodeBrix.VideoPlayback.Dav1d.csproj is THE record
+of which CodeBrix.VideoPlayback.MitLicenseForever this binding was built and
+tested against. This document deliberately does not repeat the number: it
+changes at every core publish, and a copy written here went stale within a day
+once already. Read the csproj.
+
+Two rules govern it:
+
+  * At the moment this package is published, the pin names a version that
+    EXISTS ON NUGET.ORG - never a local pre-publish pack. Proof, every time:
+    `dotnet restore --force -p:RestoreSources="https://api.nuget.org/v3/index.json"`
+    (nuget.org alone, no folder feed) succeeds, obj/project.assets.json lists no
+    local source, the build is 0 warnings, the suite is green, and the packed
+    nuspec declares the published core as the one dependency. Moving any local
+    feed aside and restoring again is the only evidence that the feed is not
+    needed.
+  * A core republish does NOT by itself require a Dav1d republish. The
+    reference is a minimum (NuGet's `>=`), the binding uses only the core's
+    decoder, frame-pool and frame seams, and a newer core resolves cleanly for
+    every consumer - the family relies on that skew being tolerated. Bump the
+    pin (and republish) when the binding needs something a newer core added,
+    or when those seams change shape.
 
 VERIFYING AGAINST AN UNPUBLISHED CodeBrix.VideoPlayback - THE PRE-PUBLISH METHOD
 (kept for the next time this repository must build against work that has not
