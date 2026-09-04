@@ -326,8 +326,8 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
        cp ../output/<rid>/LICENSE-Dav1d.txt \
           ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native/
 
-     <rid> is linux-x64, linux-arm64 or linux-riscv64. The LICENSE file is not
-     optional: BSD-2-Clause clause 2 requires the copyright notice to travel
+     <rid> is linux-x64, linux-arm64 or linux-riscv64. The LICENSE-Dav1d.txt
+     copy is not optional: BSD-2-Clause clause 2 requires the copyright notice to travel
      with a binary distribution, and this is where it travels.
 
      The file must keep the name libdav1d.so - unversioned. LibraryImport
@@ -335,7 +335,11 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
      (libdav1d.so.7) stays inside the file and is recorded in BUILD-INFO.txt.
 
   3. Do NOT copy unstripped/ into the package. It is several times larger and
-     is only for crash triage. Keep it wherever build artefacts are kept.
+     is only for crash triage. It does have a home, though: copy
+     ../output/<rid>/unstripped/libdav1d.so to ../unstripped/<rid>/ and extend
+     ../unstripped/SHA256SUMS, in the SAME commit that adopts the binary. See
+     ../unstripped/README.txt for the rule and the build-id check that proves
+     the two are the same build.
 
   4. Record the build in ../BUILD-PROVENANCE.txt - copy the values straight out
      of BUILD-INFO.txt. That file is how anyone later can tell which binary came

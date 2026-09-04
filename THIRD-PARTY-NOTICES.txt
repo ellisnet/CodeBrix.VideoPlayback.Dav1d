@@ -114,6 +114,12 @@ WHAT IS BUILT BUT NOT SHIPPED
     verification gate uses it to decode the conformance streams and compare
     hashes. It is not included in the NuGet package.
 
+    The pre-strip twin of each shipped library is also kept in this repository,
+    under dav1d-native-tools/unstripped/<rid>/, so that a crash dump from a
+    stripped release binary can still be symbolised. Those files are compiled
+    from the same vendored source and are covered by the same BSD-2-Clause
+    licence; they are not included in the NuGet package either.
+
 WHAT IS PRESENT IN THE SNAPSHOT BUT NOT COMPILED INTO ANY SHIPPED BINARY
     * src/loongarch/* - LoongArch assembly. No LoongArch runtime identifier is
       shipped, so none of it is built. It is kept because removing files would

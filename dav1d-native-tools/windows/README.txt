@@ -536,14 +536,17 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
        copy ..\output\<rid>\dav1d.dll ..\..\src\CodeBrix.VideoPlayback.Dav1d\runtimes\<rid>\native\
        copy ..\output\<rid>\LICENSE-Dav1d.txt   ..\..\src\CodeBrix.VideoPlayback.Dav1d\runtimes\<rid>\native\
 
-     <rid> is win-x64 or win-arm64. The LICENSE file is not optional:
+     <rid> is win-x64 or win-arm64. The LICENSE-Dav1d.txt copy is not
+     optional:
      BSD-2-Clause clause 2 requires the copyright notice to travel with a binary
      distribution, and this is how it travels.
 
      Keep the name dav1d.dll. LibraryImport("dav1d") probes exactly that.
 
   3. Do NOT copy dav1d.exe (staged for the cross route only) into the package.
-     There is no dav1d.pdb to worry about with the current pins.
+     There is no dav1d.pdb to worry about with the current pins, and so nothing
+     to store in ../unstripped/ either - the Windows release builds emit no
+     debug information at all. See ../unstripped/README.txt.
 
   4. Record the build in ..\BUILD-PROVENANCE.txt, copying the values straight
      out of BUILD-INFO.txt.

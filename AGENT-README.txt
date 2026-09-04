@@ -22,9 +22,10 @@ presenter uploads to the graphics device, and playback allocates no buffers once
 it is warm. That is not a detail of the implementation; it is the contract, and
 the test suite proves it.
 
-Target framework: .NET 10 or later. Licence: BSD-2-Clause (dav1d's own licence;
-the native libraries are built from the dav1d source vendored in this
-package's repository).
+Target framework: .NET 10 or later. Licence: BSD-2-Clause. The package carries
+its own LICENSE at its root, and THIRD-PARTY-NOTICES.txt beside it, which
+records the licences and the provenance of the open source code the package
+includes - including the native libraries.
 
 INSTALLATION
 ============
@@ -54,15 +55,21 @@ KEY NAMESPACES / USINGS
     using CodeBrix.VideoPlayback.Decoding;   // VideoStreamInfo, VideoCodecIds
     using CodeBrix.VideoPlayback.Frames;     // VideoFrame, if you handle frames
 
-Everything an application touches is in CodeBrix.VideoPlayback.Dav1d. The
-Interop and Decoding sub-namespaces exist for the binding's own use.
+Everything an ordinary application touches is in CodeBrix.VideoPlayback.Dav1d.
+The Interop sub-namespace is entirely internal and exists for the binding's own
+use. CodeBrix.VideoPlayback.Dav1d.Decoding is NOT internal: it holds the decoder
+type itself, Dav1dVideoDecoder, which is public and documented below. A session
+and the factory hand it back as an IVideoDecoder, so only a tool that drives a
+decoder by hand ever needs to name it:
+
+    using CodeBrix.VideoPlayback.Dav1d.Decoding;   // Dav1dVideoDecoder
 
 CORE API REFERENCE
 ==================
 
 CodeBrixVideoPlaybackDav1d  (static)
 ------------------------------------
-The front door. Four members matter.
+The front door. Everything an application needs is here.
 
     static void Register()
         Makes AV1 decoding available to every playback session in the process.
@@ -82,16 +89,24 @@ The front door. Four members matter.
         True once Register() has run. Register(session) does not set it, because
         it does not change the process-wide registry.
 
+    static bool Unregister()
+        Takes the factory back out of the process-wide registry and clears
+        IsRegistered. Returns true when it was registered and has now been
+        removed. An application has no reason to call this; it is here so a test
+        can undo itself.
+
     static Dav1dDecoderFactory Factory
         The single factory instance. Hand it to
         VideoDecoders.Register or VideoPlaybackSession.RegisterDecoderFactory
         yourself if you manage the decoder list by hand.
 
-    static string NativeVersion       // "1.5.4"
-    static string NativeApiVersion    // "7.0.0"
+    static string NativeVersion       // the native library's own version string
+    static string NativeApiVersion    // its API version, "major.minor.patch"
     static string NativeLibraryPath   // where the native was actually loaded from
         Diagnostics. The first two load the native library if it is not loaded;
-        the third reads null until something has.
+        the third reads null until something has. Register() checks the API
+        version against the one this package was built for and refuses anything
+        else, so a mismatch is reported at start-up rather than read here.
 
     There is deliberately no module initializer. An initializer would run
     whenever the assembly was touched, keeping the decoder and every native
@@ -116,6 +131,54 @@ Dav1dDecoderFactory
         record header is recognised and stepped over) or the first packet of the
         track; every AV1 key frame carries a sequence header. Data with no
         sequence header in it answers false rather than throwing.
+
+        WHAT THE SIZES MEAN. A sequence header states the CODED picture size,
+        so Width/Height and DisplayWidth/DisplayHeight come back equal here.
+        A render size that differs from the coded size is a property of a FRAME
+        header, so it only appears once frames arrive - on VideoFrame's own
+        DisplayWidth/DisplayHeight. Size a surface from the probe and be ready
+        to accept a different display size from the first frame.
+
+Dav1dVideoDecoder : IVideoDecoder      (namespace ...Dav1d.Decoding)
+--------------------------------------------------------------------
+The decoder itself. A playback session creates one for you, and
+Dav1dDecoderFactory.CreateDecoder returns one as an IVideoDecoder; construct it
+directly only in a tool that has its own packet source. The decode loop -
+SendPacket, TryReceiveFrame, Drain, Flush, Dispose - is IVideoDecoder's, and is
+the same object however you obtained it. One thread at a time, like every
+decoder; the frames it produces may be read from any thread.
+
+    Dav1dVideoDecoder(string codecId, ReadOnlyMemory<byte> codecPrivate,
+                      VideoDecoderOptions options)
+        options.BufferPool MUST be set - this decoder writes into a pool
+        supplied by its host, and a null pool is a Dav1dException naming the
+        property. A session sets it for you. codecPrivate may be an av1C
+        record, bare configuration OBUs, or nothing at all.
+
+    VideoStreamInfo Info
+        The stream as currently known: parsed from the codec-private data at
+        construction, then kept up to date as frames arrive.
+
+    string CodecId          The codec identifier the decoder was created for.
+
+    bool SupportsExternalBuffers
+                            Always true, and it means it: dav1d writes decoded
+                            samples into the host pool's memory, so nothing is
+                            copied between this decoder and a presenter.
+
+    int ThreadCount         The thread count the decoder was opened with. 0
+                            means dav1d counted the logical cores itself.
+
+    int FrameDelay          How many frames the decoder buffers internally, as
+                            reported for the settings it was opened with, and
+                            never less than 1. It is how many times SendPacket
+                            can be expected to be called before the first frame
+                            appears - worth knowing when a short clip has to
+                            show its first picture fast.
+
+    string LastLogMessage   The most recent diagnostic the native library
+                            produced, or null. The same text is folded into a
+                            Dav1dException when decoding fails.
 
 Dav1dDecoderOptions : VideoDecoderOptions
 -----------------------------------------
@@ -155,8 +218,10 @@ Added by this package:
 
 Dav1dException : VideoPlaybackException
 ---------------------------------------
-    string ErrorName        The C errno name dav1d returned: "EIO", "ENOMEM",
-                            "ERANGE", "ENOPROTOOPT", "EINVAL", "ENOENT".
+    string ErrorName        The C errno name dav1d returned: "EPERM", "ENOENT",
+                            "EIO", "ENOMEM", "EINVAL", "ERANGE",
+                            "ENOPROTOOPT". Anything else is reported by its
+                            number.
     int ErrorCode           The raw negative value.
 
 Catching VideoPlaybackException catches these too, so an application does not
@@ -196,7 +261,10 @@ Sizing a surface before anything is decoded
     {
         // info.Width, info.Height, info.BitDepth, info.Layout, info.Color,
         // info.MaxSampleValue (255, 1023 or 4095), info.ChromaShiftX/Y
-        AllocateSurface(info.DisplayWidth, info.DisplayHeight);
+        //
+        // These are the CODED dimensions - a sequence header has no render
+        // size, so info.DisplayWidth/Height equal info.Width/Height here.
+        AllocateSurface(info.Width, info.Height);
     }
 
 Low latency for a short clip
@@ -241,6 +309,9 @@ Only for a tool that has its own packet source. A session does all of this.
 
     using IVideoDecoder decoder = CodeBrixVideoPlaybackDav1d.Factory
         .CreateDecoder(VideoCodecIds.Av1, codecPrivate, options);
+
+    // The object is a Dav1dVideoDecoder. Cast to it only for the three things
+    // IVideoDecoder does not carry: ThreadCount, FrameDelay, LastLogMessage.
 
     foreach (VideoPacket packet in packets)
     {
@@ -405,14 +476,21 @@ QUICK REFERENCE CARD
     CodeBrixVideoPlaybackDav1d.Register()            once, at start-up
     CodeBrixVideoPlaybackDav1d.Register(session)     one session only
     CodeBrixVideoPlaybackDav1d.IsRegistered          has the process-wide call run
+    CodeBrixVideoPlaybackDav1d.Unregister()          undo it (for tests)
     CodeBrixVideoPlaybackDav1d.Factory               the single factory instance
-    CodeBrixVideoPlaybackDav1d.NativeVersion         "1.5.4"
-    CodeBrixVideoPlaybackDav1d.NativeApiVersion      "7.0.0"
+    CodeBrixVideoPlaybackDav1d.NativeVersion         the native's version string
+    CodeBrixVideoPlaybackDav1d.NativeApiVersion      its API version
     CodeBrixVideoPlaybackDav1d.NativeLibraryPath     where the native came from
 
     Dav1dDecoderFactory.TryProbe(data, out info)     describe before decoding
     Dav1dDecoderFactory.FactoryId                    "CodeBrix.VideoPlayback.Dav1d"
     Dav1dDecoderFactory.SupportedCodecIds            { "av01" }
+
+    Dav1dVideoDecoder.Info                           the stream, as known so far
+    Dav1dVideoDecoder.ThreadCount                    threads it was opened with
+    Dav1dVideoDecoder.FrameDelay                     frames buffered internally
+    Dav1dVideoDecoder.LastLogMessage                 the native's last diagnostic
+    Dav1dVideoDecoder.SupportsExternalBuffers        always true
 
     Dav1dDecoderOptions.Threads                      0 = auto
     Dav1dDecoderOptions.MaxFrameDelay                1 = lowest latency

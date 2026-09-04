@@ -29,9 +29,16 @@ platform produced them:
   <rid>/BUILD-INFO.txt         toolchain, pins, sizes, sha256, deployment target
                                and the conformance results for that build. This
                                is what ../BUILD-PROVENANCE.txt is filled in from
-  <rid>/unstripped/<library>   the pre-strip binary. NOT shipped
+  <rid>/unstripped/<library>   the pre-strip binary. NOT shipped. This copy is
+                               transient, like the rest of this folder; the one
+                               that is kept lives in ../unstripped/<rid>/
   <rid>/<library>.dSYM         macOS only - debug symbols. NOT shipped
-  <rid>/dav1d.pdb              Windows only - debug symbols. NOT shipped
+  <rid>/dav1d.pdb              Windows only - debug symbols. NOT shipped, and
+                               NOT produced by the current release settings:
+                               --buildtype=release asks for no debug info, so
+                               link.exe emits no .pdb and the scripts record
+                               "Debug symbols: none". The copy step is here for
+                               the day the Windows scripts ask for symbols
   staging/<rid>/<library>.<ext>
                                a compressed copy, for moving the binary to
                                whichever machine assembles the package. Each

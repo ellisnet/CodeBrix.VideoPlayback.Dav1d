@@ -72,7 +72,15 @@ FOLDER MAP
                           build-common.sh, build-osx-arm64.sh,
                           build-osx-x64.sh, crossfile-x86_64.txt, README.txt
 
-  output/                 build results (git-ignored except its README.txt)
+  unstripped/             COMMITTED. The pre-strip twin of every shipped native,
+                          one folder per RID, plus SHA256SUMS and a README.txt
+                          with the rule for keeping them in step with the
+                          binaries in runtimes/<rid>/native/. For crash triage:
+                          never shipped, never an input to any build
+
+  output/                 build results (git-ignored except its README.txt).
+                          Disposable - the pre-strip copies that are meant to
+                          last live in unstripped/, not here
 
 
 WHICH README TO READ
@@ -84,8 +92,10 @@ WHICH README TO READ
 Each one lists the tools to install on that machine, with the exact command,
 and nothing else is needed.
 
-  >>> As of 2026-08-29 SIX of the seven slices have been built and have passed
-      their gates: the three LINUX, both macOS, and win-x64.
+  >>> All seven slices have been built and adopted into the package. SIX of
+      them passed their gates in full on 2026-08-29: the three LINUX, both
+      macOS, and win-x64. The seventh, win-arm64, is adopted with an incomplete
+      gate - see below.
 
       The macOS scripts were written on Linux and had never been executed on a
       Mac; on their first real run both slices built clean and needed no fix.
@@ -115,22 +125,28 @@ THE SEVEN RUNTIME IDENTIFIERS
   osx-arm64       macos/build-osx-arm64.sh              libdav1d.dylib
   osx-x64         macos/build-osx-x64.sh                libdav1d.dylib
 
-Built and adopted so far: osx-arm64, osx-x64, win-x64 and win-arm64
-(2026-08-29) - but win-arm64 was adopted with its gate deliberately INCOMPLETE,
-pending verification on ARM64 hardware, and BUILD-PROVENANCE.txt says so in
-those words. Built but not yet adopted: linux-x64, linux-arm64, linux-riscv64.
-All seven are now built. BUILD-PROVENANCE.txt is the authoritative per-RID
-record.
+All seven were built and adopted on 2026-08-29: linux-x64, linux-arm64,
+linux-riscv64, win-x64, win-arm64, osx-arm64 and osx-x64. win-arm64 alone was
+adopted with its gate deliberately INCOMPLETE - it was cross-built from an x64
+machine, so its smoke test and conformance decodes are UNRUN pending ARM64
+hardware, and BUILD-PROVENANCE.txt says so in those words. BUILD-PROVENANCE.txt
+is the authoritative per-RID record.
 
 All seven names are UNVERSIONED on purpose: LibraryImport("dav1d") on .NET
 probes for exactly those names and does not follow sonames. The soname
 (libdav1d.so.7 / API 7.0.0) lives inside the file and is recorded in every
 BUILD-INFO.txt.
 
-Every RID folder also gets a LICENSE file - a verbatim copy of dav1d's COPYING.
-That is not a nicety: BSD-2-Clause clause 2 requires the copyright notice to be
-reproduced with a binary distribution, and shipping it beside the binary in
-runtimes/<rid>/native/ is how this package satisfies it.
+Every RID folder also gets a LICENSE-Dav1d.txt - a verbatim copy of dav1d's
+COPYING. That is not a nicety: BSD-2-Clause clause 2 requires the copyright
+notice to be reproduced with a binary distribution, and shipping it beside the
+binary in runtimes/<rid>/native/ is how this package satisfies it.
+
+The name is package-unique on purpose. These files land in a consuming
+application's OUTPUT FOLDER, where a file named plainly LICENSE collides with
+any other package that ships one there - whichever is copied last wins and a
+licence text goes missing. Every build script here writes the package-unique
+name; see MAINTAINER-README.txt.
 
 
 THE VENDORED COMMIT

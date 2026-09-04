@@ -56,6 +56,16 @@ PURPOSE AND SCOPE
 One project, one package: AV1 decoding for CodeBrix.VideoPlayback, through a
 binding over dav1d, with self-built native libraries for seven platforms.
 
+    CodeBrix.VideoPlayback.Dav1d.slnx   the solution. Its "Solution Items"
+                                        folder carries .gitignore,
+                                        AGENT-README.txt, EXTRAS-README.txt,
+                                        global.json, icon-codebrix-128.png,
+                                        LICENSE, MAINTAINER-README.txt,
+                                        README-INDEX.txt, README.md and
+                                        THIRD-PARTY-NOTICES.txt; its "Tests"
+                                        folder carries the test project
+    global.json                         selects the test runner. Nothing else -
+                                        it pins no SDK. See TESTING
     src/CodeBrix.VideoPlayback.Dav1d/   the binding, packable
     tests/CodeBrix.VideoPlayback.Dav1d.Tests/   the suite
     dav1d-native-tools/                 everything needed to BUILD the natives
@@ -118,9 +128,32 @@ only when
 is set. Without it the test skips with a message saying why. A headless machine
 must be able to run the whole suite green.
 
-Three test classes touch process-wide state - the decoder registry - and are in
-the "Process-wide registries" xUnit collection so they never run beside each
-other.
+ONE test class touches process-wide state - the decoder registry - and carries
+[Collection("Process-wide registries")] so that nothing runs beside it:
+CodeBrixVideoPlaybackDav1dTests. The other seven classes carry no collection
+attribute, because they register with a SESSION rather than with the process
+(CodeBrixVideoPlaybackDav1d.Register(session)) or construct a decoder through
+the factory directly. A new test that calls the parameterless Register(), or
+Unregister(), belongs in that collection too.
+
+THE TEST RUNNER IS Microsoft.Testing.Platform, selected by global.json at the
+repository root. That file is two settings deep and is the whole of it:
+
+    { "test": { "runner": "Microsoft.Testing.Platform" } }
+
+It pins NO SDK version, so the newest installed .NET 10 SDK is still used.
+Because the setting lives in global.json rather than in the test csproj it
+applies to every `dotnet test` run anywhere in the repository, including CI.
+Keep the file committed: without it `dotnet test` falls back to the older VSTest
+bridge. You can tell which one ran - the Microsoft Testing Platform's output
+ends in a "Test run summary:" block, while the bridge invokes MSBuild with
+`--target:VSTest`.
+
+The test project's package references are xunit.v3, xunit.runner.visualstudio,
+Microsoft.NET.Test.Sdk and SilverAssertions.ApacheLicenseForever. There is NO
+coverage collector - no coverlet.collector reference and no `--collect`
+argument - so nothing writes to TestResults/ and no coverage report is produced
+here.
 
 
 PACKAGING / PUBLISHING

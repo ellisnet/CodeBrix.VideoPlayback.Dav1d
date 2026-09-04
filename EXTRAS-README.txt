@@ -33,8 +33,22 @@ repository alone, with nothing that may have disappeared in the meantime.
     patches/            local changes to the vendored source, if there ever are
                         any. There are none.
     test-vectors/       see below.
-    output/             gitignored. Built, stripped and staged libraries,
-                        unstripped copies for crash triage, and SHA256SUMS.
+    unstripped/         COMMITTED, unlike output/. The pre-strip twin of every
+                        native library the package ships, one folder per runtime
+                        identifier, with SHA256SUMS and a README.txt carrying the
+                        rule that keeps them in step with the shipped binaries.
+                        They exist so a crash dump from a stripped release binary
+                        can still be symbolised. Nothing here ships and nothing
+                        here is an input to any build or pack step. The three
+                        Linux twins are stored; the two macOS twins are still to
+                        be copied from the Mac, and the Windows builds produce no
+                        debug information to store.
+    output/             gitignored, and disposable: one build's own working tree
+                        - freshly built, stripped and staged libraries, its own
+                        transient pre-strip copies, BUILD-INFO.txt and
+                        SHA256SUMS. Delete the whole folder and the next build
+                        recreates it. The pre-strip copies that are meant to LAST
+                        are the committed ones in unstripped/ above.
     BUILD-PROVENANCE.txt
                         how each committed native was actually built, and by whom
                         and when.

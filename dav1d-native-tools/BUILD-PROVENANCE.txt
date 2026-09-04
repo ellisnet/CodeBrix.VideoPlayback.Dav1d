@@ -88,8 +88,8 @@ SIMD present     : yes - 6,788 AVX2/SSSE3/SSE4 symbols in the unstripped binary
 Gate             : architecture ok, 17/17 exports, ldd -r clean, glibc floor ok,
                    smoke test passed (API 7.0.0, decoder opened and closed),
                    7/7 conformance decodes matched
-Adopted into runtimes/linux-x64/native/ : not yet (the package project does not
-                   exist yet - Phase C scaffolding follows)
+Adopted into runtimes/linux-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
+                   beside it as LICENSE-Dav1d.txt
 
 
 ================================================================================
@@ -124,7 +124,8 @@ Gate             : architecture ok, 17/17 exports, ldd -r clean, glibc floor ok,
 Note             : emulation exercises the NEON code paths, but qemu is not
                    silicon. Running the managed test suite on real arm64
                    hardware remains worth doing before a release.
-Adopted into runtimes/linux-arm64/native/ : not yet
+Adopted into runtimes/linux-arm64/native/ : YES, 2026-08-29, with dav1d's
+                   COPYING beside it as LICENSE-Dav1d.txt
 
 
 ================================================================================
@@ -165,7 +166,8 @@ Note             : qemu 10 emulates RVV 1.0, so the vector paths did execute
                    the RVV code is selected at run time from AT_HWCAP plus
                    dav1d_has_compliant_rvv(), so a board without V simply uses
                    the scalar paths.
-Adopted into runtimes/linux-riscv64/native/ : not yet
+Adopted into runtimes/linux-riscv64/native/ : YES, 2026-08-29, with dav1d's
+                   COPYING beside it as LICENSE-Dav1d.txt
 
 
 ================================================================================

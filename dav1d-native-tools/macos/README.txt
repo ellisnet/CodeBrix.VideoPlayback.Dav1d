@@ -345,7 +345,8 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
        cp ../output/<rid>/LICENSE-Dav1d.txt \
           ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native/
 
-     <rid> is osx-arm64 or osx-x64. The LICENSE file is not optional:
+     <rid> is osx-arm64 or osx-x64. The LICENSE-Dav1d.txt copy is not
+     optional:
      BSD-2-Clause clause 2 requires the copyright notice to travel with a binary
      distribution, and this is how it travels.
 
@@ -353,7 +354,13 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
      exactly that.
 
   3. Do NOT copy the .dSYM or unstripped/ into the package. They are for crash
-     triage and would multiply the package size.
+     triage and would multiply the package size. They do have a home: copy
+     ../output/<rid>/unstripped/libdav1d.dylib and the whole
+     ../output/<rid>/libdav1d.dylib.dSYM/ bundle into ../unstripped/<rid>/ and
+     extend ../unstripped/SHA256SUMS, in the SAME commit that adopts the binary.
+     ../unstripped/README.txt has the rule and the LC_UUID check that proves the
+     stored copy is the build that was adopted - which matters for osx-x64,
+     whose link is not UUID-reproducible.
 
   4. Record the build in ../BUILD-PROVENANCE.txt, copying the values straight
      out of BUILD-INFO.txt.

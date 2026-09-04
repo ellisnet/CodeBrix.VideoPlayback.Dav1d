@@ -26,8 +26,13 @@ MAINTAINER AND EXTRAS
       design - the picture allocator, the stacked reference counts, the
       back-pressure loop, and the structure layouts pinned to the vendored
       headers; the provenance of the vendored dav1d source; and what remains to
-      be verified on which devices. It opens with the one thing that must happen
-      before this package is ever published.
+      be verified on which devices. It also carries the naming rule for the
+      per-native licence files - LICENSE-Dav1d.txt, because a file named plainly
+      LICENSE collides in a consuming application's output folder - and the
+      standing task of storing the unstripped macOS binaries the next time this
+      repository is open on the Mac. It opens with the rule governing the
+      CodeBrix.VideoPlayback package pin: at every publish of this package, that
+      pin must name a version that exists on nuget.org.
   EXTRAS-README.txt
       The three folders that never ship: dav1d-native-tools (everything needed to
       build the seven native libraries, self-contained), its test-vectors (the
@@ -41,6 +46,8 @@ GENERAL
       Human-facing overview shown on GitHub and nuget.org.
   README-INDEX.txt
       This file.
+  THIRD-PARTY-NOTICES.txt
+      What came from where, and under which licences.
 
 ALSO WORTH READING, IN PLACE
 ----------------------------
@@ -52,6 +59,15 @@ ALSO WORTH READING, IN PLACE
   dav1d-native-tools/test-vectors/README.txt
       Where the six conformance streams came from, what each one covers, and the
       film-grain note to read before touching EXPECTED.md5.
+  dav1d-native-tools/unstripped/README.txt
+      Where the pre-strip twin of every shipped native library is kept, how to
+      prove one is the same build as the binary beside it, and the rule that a
+      newly adopted binary's unstripped mate lands in the same commit.
   tests/assets/ASSETS.txt
       The end-to-end playback files, and the opt-in switch for the audible test.
+
+  The per-platform build READMEs - dav1d-native-tools/linux/, macos/, windows/,
+  and the ones in patches/ and output/ - are reached through
+  dav1d-native-tools/README.txt, which says which to read for the machine you
+  are on.
 ================================================================================
