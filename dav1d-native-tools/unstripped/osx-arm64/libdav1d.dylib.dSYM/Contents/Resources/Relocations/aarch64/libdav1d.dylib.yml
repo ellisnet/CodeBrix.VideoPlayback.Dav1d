@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Volumes/VideoWork/GitHome/CodeBrix.VideoPlayback.Dav1d/dav1d-native-tools/output/osx-arm64/unstripped/libdav1d.dylib'
+relocations:     []
+...

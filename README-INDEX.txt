@@ -29,8 +29,9 @@ MAINTAINER AND EXTRAS
       be verified on which devices. It also carries the naming rule for the
       per-native licence files - LICENSE-Dav1d.txt, because a file named plainly
       LICENSE collides in a consuming application's output folder - and the
-      standing task of storing the unstripped macOS binaries the next time this
-      repository is open on the Mac. It opens with the rule governing the
+      record of storing the unstripped macOS binaries, done on the Mac on
+      2026-09-05, with the UUID rule that governs any future osx-x64 rebuild.
+      It opens with the rule governing the
       CodeBrix.VideoPlayback package pin: at every publish of this package, that
       pin must name a version that exists on nuget.org.
   EXTRAS-README.txt

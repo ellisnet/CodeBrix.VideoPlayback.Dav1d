@@ -222,9 +222,10 @@ Licence: BSD-2-Clause, "Copyright (c) 2018-2025, VideoLAN and dav1d authors".
 
 The pre-strip twin of every shipped binary is COMMITTED under
 dav1d-native-tools/unstripped/<rid>/ (its README.txt has the rule and the
-verification recipe); they exist for crash triage and are shipped nowhere. The
-three Linux twins are stored; the two macOS twins are still to be copied - see
-"TO DO ON THE MAC" below.
+verification recipe); they exist for crash triage and are shipped nowhere. All
+five are stored - the three Linux twins on 2026-09-01, the two macOS twins
+(each a dylib plus its .dSYM bundle) on 2026-09-05. Windows has none, by
+design.
 
 The dav1d API version is 7.0.0. The binding checks that at start-up and refuses
 anything else, because the structure layouts below are pinned to those headers
@@ -417,63 +418,47 @@ VideoColorInfo.Resolve turns that into the library's own choice - which for
 standard-definition content is BT.601, not BT.709.
 
 
-TO DO ON THE MAC - STORE THE UNSTRIPPED macOS BINARIES (open since 2026-09-01)
+UNSTRIPPED macOS BINARIES - STORED (done 2026-09-05, open since 2026-09-01)
 ================================================================================
-The osx-arm64 and osx-x64 natives were built on the Mac on 2026-08-29 and their
-pre-strip dylibs and .dSYM bundles exist ONLY in that machine's git-ignored
-dav1d-native-tools/output/ tree. They have to be copied into the committed
-dav1d-native-tools/unstripped/ folder - the Linux three were stored on
-2026-09-01; the macOS two were not, because this repository has never been
-open on the Mac since. Do this the next time it is:
+DONE. The osx-arm64 and osx-x64 pre-strip dylibs and .dSYM bundles, built on the
+Mac on 2026-08-29, were copied from that machine's git-ignored output/ tree into
+the committed dav1d-native-tools/unstripped/ on 2026-09-05, and SHA256SUMS and
+unstripped/README.txt were extended to record them. Nothing remains to be done
+on the Mac for this item; it is item J1 in
+~/ClaudeHome/MASTER_LIST_videoplayback_remaining_work_2026-09-01.txt on the
+Linux laptop (dev-machine notes, not part of this repository) and can be closed
+there.
 
-  1. Copy, per RID (the build scripts leave the files exactly here):
-       dav1d-native-tools/output/osx-arm64/unstripped/libdav1d.dylib
-         -> dav1d-native-tools/unstripped/osx-arm64/libdav1d.dylib
-       dav1d-native-tools/output/osx-arm64/libdav1d.dylib.dSYM/   (whole bundle)
-         -> dav1d-native-tools/unstripped/osx-arm64/libdav1d.dylib.dSYM/
-     and the same two for osx-x64.
+The osx-x64 sharp edge did NOT bite: that machine's output/ tree had not been
+rebuilt since 2026-08-29, so the stored unstripped dylib is the same build as
+the shipped one. Both proofs were run before the copy and again afterwards from
+the committed location, and all of them passed:
 
-  2. Prove each copy is the SAME BUILD as the shipped dylib - both checks:
-       shasum -a 256 dav1d-native-tools/unstripped/<rid>/libdav1d.dylib
-         must equal the "SHA256 unstripped" line of that RID's entry in
-         dav1d-native-tools/BUILD-PROVENANCE.txt:
-           osx-arm64
-             3ea0c3c6f06e777845442df46eeea727cb1949ca2a4be709e8c783f06c0ceeb8
-           osx-x64
-             ff18cfe1da5fba9b536f4f8853ff1dbfb52c1f776c03983ca6318db369a74177
-       dwarfdump --uuid dav1d-native-tools/unstripped/<rid>/libdav1d.dylib
-       dwarfdump --uuid dav1d-native-tools/unstripped/<rid>/libdav1d.dylib.dSYM
-       dwarfdump --uuid \
-         src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native/libdav1d.dylib
-         all three must print the same LC_UUID:
-           osx-arm64  70E56A37-E2AB-304E-A4B2-C0C6EC4F3FE6
-           osx-x64    134196EB-C570-3C80-AFAB-11581155E80C
+    shasum -a 256 of each stored dylib equals its RID's "SHA256 unstripped"
+    line in dav1d-native-tools/BUILD-PROVENANCE.txt -
+      osx-arm64  3ea0c3c6f06e777845442df46eeea727cb1949ca2a4be709e8c783f06c0ceeb8
+      osx-x64    ff18cfe1da5fba9b536f4f8853ff1dbfb52c1f776c03983ca6318db369a74177
 
-  3. THE osx-x64 SHARP EDGE. That build is NOT reproducible: nasm 3.02 makes the
-     link alternate between two LC_UUIDs (BUILD-PROVENANCE, "Reproducibility").
-     Only the run that was adopted into runtimes/osx-x64/native/ pairs with the
-     shipped binary; an unstripped dylib from a rebuild may carry the other
-     UUID and is USELESS for triage even though its code is identical. If the
-     Mac's output/ tree was rebuilt since 2026-08-29 and the UUIDs no longer
-     match, do NOT store the mismatched file: the only honest route is to adopt
-     that fresh build into runtimes/osx-x64/native/ AND store its unstripped
-     mate in the same commit (unstripped/README.txt, "THE RULE"), which means a
-     republish of this package. osx-arm64 has no such problem - its UUID is
-     stable across runs.
+    dwarfdump --uuid prints one LC_UUID per RID across all three of the stored
+    dylib, its .dSYM and src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/
+    native/libdav1d.dylib -
+      osx-arm64  70E56A37-E2AB-304E-A4B2-C0C6EC4F3FE6
+      osx-x64    134196EB-C570-3C80-AFAB-11581155E80C
 
-  4. Extend dav1d-native-tools/unstripped/SHA256SUMS with a line for each new
-     dylib (and for each dSYM's Contents/Resources/DWARF/libdav1d.dylib), and in
-     dav1d-native-tools/unstripped/README.txt replace the "PENDING - the macOS
-     slices" section with the two UUIDs recorded the way the Linux build-ids
-     are. Then commit all of it together.
+Because the shipped osx-x64 binary was not replaced, this is a documentation
+and debug-artifact commit only: NO republish of the package is needed.
 
-  Windows: NOTHING to store, by design - the release builds emitted no debug
-  information at all (see unstripped/README.txt). Do not go looking for .pdb
-  files.
+The osx-x64 warning still stands for any FUTURE rebuild - nasm 3.02 makes that
+link alternate between two legitimate LC_UUIDs (BUILD-PROVENANCE,
+"Reproducibility"), so a rebuilt unstripped dylib may carry the other UUID and
+be useless for triage. Never store such a file beside a shipped binary it does
+not match: adopt the fresh build into runtimes/osx-x64/native/ AND store its
+unstripped mate in the same commit (unstripped/README.txt, "THE RULE"), which
+does mean a republish. osx-arm64's UUID is stable across runs.
 
-  Cross-reference: this is item J1 in
-  ~/ClaudeHome/MASTER_LIST_videoplayback_remaining_work_2026-09-01.txt on the
-  Linux laptop (dev-machine notes; not part of this repository).
+Windows: NOTHING to store, by design - the release builds emitted no debug
+information at all (see unstripped/README.txt). Do not go looking for .pdb
+files.
 
 
 WHAT REMAINS TO BE VERIFIED, AND WHERE

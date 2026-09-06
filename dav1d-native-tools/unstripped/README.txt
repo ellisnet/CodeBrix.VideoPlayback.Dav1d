@@ -13,9 +13,9 @@ One folder per runtime identifier, mirroring runtimes/<rid>/native/ in the
 package tree:
 
   <rid>/libdav1d.so       the pre-strip ELF (Linux)
-  <rid>/libdav1d.dylib    the pre-strip Mach-O (macOS) - see PENDING below
+  <rid>/libdav1d.dylib    the pre-strip Mach-O (macOS)
   <rid>/libdav1d.dylib.dSYM/
-                          the macOS debug-symbol bundle - see PENDING below
+                          the macOS debug-symbol bundle
 
 Verify any file two ways:
 
@@ -33,15 +33,22 @@ twin's on 2026-09-01):
   linux-arm64    6de1abac61d97a721e7079bf633427a893319f3c
   linux-riscv64  b572c681063f2af65f677118f9d86c189d97afbb
 
-PENDING - the macOS slices
---------------------------------------------------------------------------------
-osx-arm64 and osx-x64 were built on the Mac; their unstripped dylibs and .dSYM
-bundles live in that machine's output/ tree and must be copied here from there.
-IMPORTANT for osx-x64: the build is not byte-reproducible (two legitimate
-LC_UUID variants - see its BUILD-PROVENANCE entry). The copy stored here must
-be the SAME build that was adopted into runtimes/osx-x64/native/, proven by
-matching LC_UUIDs - a fresh rebuild's unstripped output may not match the
-shipped binary and would be useless for triage.
+LC_UUIDs of the stored macOS slices (each verified equal to its shipped twin's
+on 2026-09-05, when these files were copied here from the Mac's output/ tree):
+
+  osx-arm64      70E56A37-E2AB-304E-A4B2-C0C6EC4F3FE6
+  osx-x64        134196EB-C570-3C80-AFAB-11581155E80C
+
+For each RID the unstripped dylib, its .dSYM and the shipped
+runtimes/<rid>/native/libdav1d.dylib all print that one UUID, and the dylib's
+sha256 matches its ../BUILD-PROVENANCE.txt "SHA256 unstripped" line.
+
+IMPORTANT for osx-x64: that build is not byte-reproducible (two legitimate
+LC_UUID variants - see its BUILD-PROVENANCE entry). The copy stored here is the
+SAME build that was adopted into runtimes/osx-x64/native/, proven by the
+matching LC_UUID above. A fresh rebuild's unstripped output may carry the other
+UUID; it would not match the shipped binary and would be useless for triage, so
+it must never be substituted for the file stored here.
 
 WINDOWS - nothing to store, by design
 --------------------------------------------------------------------------------
