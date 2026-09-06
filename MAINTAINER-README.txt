@@ -463,12 +463,26 @@ files.
 
 WHAT REMAINS TO BE VERIFIED, AND WHERE
 ================================================================================
-Everything below has been verified ON linux-x64 ONLY, because that is the only
-platform this repository has been built and run on so far:
+The suite below - the conformance hashes, the zero-copy path, the release
+threads, the back-pressure loop, the probe, the 10-bit path, the frame-size
+guard, the library resolver, the API version guard, and whole-file playback -
+has been verified on TWO platforms so far:
 
-    the conformance hashes, the zero-copy path, the release threads, the
-    back-pressure loop, the probe, the 10-bit path, the frame-size guard, the
-    library resolver, the API version guard, and whole-file playback.
+    linux-x64       the original platform.
+    osx-arm64       VERIFIED 2026-09-05 on macOS 26.5.1, Apple Silicon, .NET SDK
+                    10.0.400. `dotnet build -c Release` 0 warnings / 0 errors;
+                    `dotnet test -c Release` 90 tests, 89 passed, 0 failed, and
+                    the single documented skip (the opt-in audible playback
+                    test, CODEBRIX_AUDIO_RUN_PLAYBACK_TESTS unset). The runner
+                    reported net10.0|arm64, so this was the arm64 slice.
+                    Two macOS-specific items were cleared with it:
+                      * THE errno TABLE. Dav1dErrorCodes.UsesMacErrnoTable is
+                        true here, so Try_again_is_the_platforms_own_negated_
+                        EAGAIN asserted -35 rather than -11 and passed. That
+                        branch had never been executed before.
+                      * THE INSTALL NAME. otool -D on the shipped dylib prints
+                        @rpath/libdav1d.dylib, for osx-x64 as well as osx-arm64,
+                        so install_name_tool -id did its job on both.
 
 Per §6.5 of the programme plan, each remaining device must run the SAME suite -
 it is the per-RID verification, not a smoke test - and record the result:
@@ -476,9 +490,12 @@ it is the per-RID verification, not a smoke test - and record the result:
     linux-arm64     a Pi-class board. NEON, DotProd and i8mm assembly paths.
     linux-riscv64   the RISC-V board. RVV assembly, detected at run time from
                     AT_HWCAP; qemu-user first, then real hardware.
-    osx-arm64       Apple Silicon. Also the only place to check that
-                    install_name_tool -id @rpath/libdav1d.dylib did its job.
-    osx-x64         the Intel slice, on the same Mac.
+    osx-x64         the Intel slice. It can run under Rosetta on the Apple
+                    Silicon Mac, but NOT as things stand: that machine's x64
+                    .NET tree (/usr/local/share/dotnet/x64) carries only SDK
+                    8.0.401 / runtime 8.0.8, and this project targets net10.0.
+                    Install an x64 .NET 10 runtime and the suite can be run
+                    there with `arch -x86_64`. Rosetta itself is present.
     win-x64         a Windows x64 box. Also the place to check that
                     -Db_vscrt=static_from_buildtype really removed the need for a
                     VC redistributable.
@@ -487,8 +504,9 @@ it is the per-RID verification, not a smoke test - and record the result:
 Two things to watch for specifically on the platforms not yet run:
 
   * THE errno TABLE. EAGAIN is 35 on macOS, not 11. Dav1dNativeLayoutTests checks
-    the value for the platform it runs on, so the two macOS slices are what prove
-    that branch of the table.
+    the value for the platform it runs on. PROVEN on osx-arm64 on 2026-09-05
+    (above); the check keys off the OS rather than the architecture, so osx-x64
+    will exercise the same branch and is not needed to establish it.
   * THE STRUCTURE OFFSETS. They are the same on every platform this package ships
     for, because all seven use a 64-bit model in which int and enum are four bytes
     and a pointer is eight, and no declaration here contains a C long. The layout
