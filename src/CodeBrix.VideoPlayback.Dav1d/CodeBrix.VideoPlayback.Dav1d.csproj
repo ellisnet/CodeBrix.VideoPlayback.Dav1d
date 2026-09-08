@@ -75,7 +75,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CodeBrix.VideoPlayback.MitLicenseForever" Version="1.0.245.280" />
+    <PackageReference Include="CodeBrix.VideoPlayback.MitLicenseForever" Version="1.0.251.1200" />
   </ItemGroup>
 
   <ItemGroup>
