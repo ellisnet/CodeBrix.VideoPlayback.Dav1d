@@ -20,6 +20,8 @@
     <PackageReference Include="CodeBrix.VideoPlayback.Dav1d.BsdLicenseForever" Version="$(Dav1dPackageVersion)" />
     <PackageReference Include="CodeBrix.Audio.Android.ApacheLicenseForever" Version="1.0.270.1181" />
     <PackageReference Include="CodeBrix.Audio.Opus.BsdLicenseForever" Version="1.0.269.1352" />
+    <!-- Optional coordinated validation of a Core fix before platform dependency pins are updated. -->
+    <PackageReference Include="CodeBrix.Audio.Core.MitLicenseForever" Version="$(AudioCoreVersion)" Condition="'$(AudioCoreVersion)' != ''" />
     <Compile Include="../CodeBrix.VideoPlayback.Dav1d.Tests/Internal/IvfStreamReader.cs" Link="Internal/IvfStreamReader.cs" />
     <Compile Include="../CodeBrix.VideoPlayback.Dav1d.Tests/Internal/PlanarFrameHasher.cs" Link="Internal/PlanarFrameHasher.cs" />
     <AndroidAsset Include="../../dav1d-native-tools/test-vectors/*.ivf" Link="vectors/%(Filename)%(Extension)" />

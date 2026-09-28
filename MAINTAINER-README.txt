@@ -479,7 +479,7 @@ package consumers need no custom MSBuild targets or native copy instructions.
 tests/CodeBrix.VideoPlayback.Dav1d.AndroidTests is intentionally outside the
 desktop solution. It consumes a locally PACKED package and the published
 Android audio backend, so it verifies actual NuGet-to-APK asset flow. Its README
-contains commands and the integration limitation. Ordinary desktop builds and
+contains commands and the Audio.Core dependency requirement. Ordinary desktop builds and
 tests still need no Android workload or NDK.
 
 2026-09-28 UTC validation on Android 13/API 33 hardware:
@@ -489,16 +489,21 @@ tests still need no Android workload or NDK.
   including all hashes twice, flush/drain, forced GC, zero-copy pointers,
   retained-frame disposal on another thread, BGRA conversion and video-only
   session playback/pause/seek. Debug audio integration passed with Vorbis/Opus;
-  Release AV1 + Opus playback also passed on both devices.
+  Release AV1 + Opus playback also passed on both devices. With local fixed
+  Audio.Core 1.0.271.274, the FULL Release suite passed, including AV1 + Vorbis
+  playback, pause, seek and drain, using packed Dav1d 1.0.271.248.
   Desktop regression: 90 tests, 89 passed, 1 documented audible-test skip.
   No x64 emulator was used. Actual 16 KB page execution remains unverified.
 
-The full Release integration has an independent Vorbis failure: standalone
-Audio.Core packet decoding also SIGSEGVs on both devices with dav1d never
-loaded. See AndroidTests/README.txt for pinned versions and --audio-only repro.
-The default test run reports failure; --codec-only isolates the passing AV1
-tests. Do not describe full Release Vorbis playback as verified until the
-audio/runtime problem is fixed and these checks are rerun.
+Published Audio.Core 1.0.269.1270 has an independent Release Vorbis SIGSEGV on
+both devices. A Core-only reproducer isolated variable negative Unsafe.Add
+offsets in its MDCT. The sibling CodeBrix.Audio repository fixes five offsets
+with signed native-sized arithmetic; Audio.Android and Opus need no source
+changes. Local Core 1.0.271.274 passes the full integration checks above.
+Publish fixed Core before raising downstream dependency pins; consumers may
+also reference it directly alongside the existing Android backend. The test
+app accepts -p:AudioCoreVersion=... for this coordinated validation. Its README
+records the exact dependencies, commands and remaining publication step.
 
 
 WHAT REMAINS TO BE VERIFIED ON DESKTOP, AND WHERE

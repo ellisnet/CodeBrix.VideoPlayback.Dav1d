@@ -20,7 +20,8 @@ public sealed class MainActivity : Activity
         bool audio = Intent.GetBooleanExtra("audio", true);
         bool audioOnly = Intent.GetBooleanExtra("audioOnly", false);
         File.WriteAllText(Path.Combine(directory, "results.txt"), "RUNNING\n");
-        File.WriteAllText(Path.Combine(directory, "progress.txt"), "Starting\n");
+        File.WriteAllText(Path.Combine(directory, "progress.txt"), "Starting\nCore: " +
+            typeof(CodeBrix.Audio.Codecs.VorbisPacketCodecFactory).Assembly.FullName + "\n");
         _ = Task.Run(() =>
         {
             string result;

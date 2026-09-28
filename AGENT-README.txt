@@ -73,12 +73,12 @@ CodeBrix.Audio.Opus.CodeBrixAudioOpus.Register(). Video-only playback can use
 VideoPlaybackOptions.PlayAudio = false without an audio backend. Rendering is
 provided by the consuming application.
 
-Validation limitation (2026-09-28 UTC): AV1 decoder and video-only checks pass
-on Android 13 ARM64/x64 in Debug and trimmed/AOT Release. Vorbis audio passes
-in Debug but crashes in Release with Audio.Core 1.0.269.1270 and Audio.Android
-1.0.270.1181. Standalone Vorbis packet decoding reproduces it without loading
-dav1d; full Release Vorbis playback is not verified. The repository's Android
-test-app README records the reproduction and dependency versions.
+Android Release playback with Vorbis audio requires Audio.Core containing the
+signed-offset fix for its managed Vorbis transform. Older Core packages can
+crash during Vorbis decoding on both ARM64 and x64. The correction belongs to
+Audio.Core; selecting the fixed Core alongside Audio.Android is sufficient.
+See the Android validation notes for the tested dependency versions and rollout
+status. AV1 decoding itself does not depend on that audio fix.
 
 KEY NAMESPACES / USINGS
 =======================

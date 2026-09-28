@@ -76,7 +76,7 @@ CodeBrixVideoPlaybackDav1d.Register();
 
 An Opus track additionally needs `CodeBrix.Audio.Opus.BsdLicenseForever` and `CodeBrix.Audio.Opus.CodeBrixAudioOpus.Register()`. The application supplies the visual presenter.
 
-Decoder checks and AV1 + Opus playback pass on Android 13 ARM64 and x64 in Debug and Release. The published audio dependencies currently have a separate Release Vorbis decoding crash, reproducible without loading dav1d; see the [Android validation notes](https://github.com/ellisnet/CodeBrix.VideoPlayback.Dav1d/blob/main/tests/CodeBrix.VideoPlayback.Dav1d.AndroidTests/README.txt) for versions and reproduction steps.
+Decoder checks and AV1 + Opus playback pass on Android 13 ARM64 and x64 in Debug and Release. Release Vorbis playback requires the signed-offset fix in Audio.Core; full playback with that local fix also passes on both devices. The fix must be published and selected by the consuming application. See the [Android validation notes](https://github.com/ellisnet/CodeBrix.VideoPlayback.Dav1d/blob/main/tests/CodeBrix.VideoPlayback.Dav1d.AndroidTests/README.txt) for dependency versions and reproduction steps.
 
 ### Describe a stream before anything is decoded
 

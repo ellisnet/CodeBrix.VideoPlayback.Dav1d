@@ -73,12 +73,17 @@ Dav1d checks passed in Debug and trimmed/profiled-AOT Release on both devices:
 7/7 conformance cases (each decoded twice), GC stress, zero-copy and retained
 frame lifetimes, BGRA conversion, and video-only playback including pause/seek.
 Full Debug integration also passed with both Opus and Vorbis audio. Release
-AV1 + Opus playback passed on both devices before the Vorbis stage failed.
+AV1 + Opus playback passed with the original dependencies. After selecting
+fixed local Audio.Core 1.0.271.274, FULL Release integration passed on both
+devices, including AV1 + Vorbis playback, pause, seek and drain. That run used
+packed Dav1d 1.0.271.248 and the unchanged published Android/Opus dependencies
+listed below. Records: MANAGED-RELEASE-FIXED-CORE.json in each device's output
+directory.
 
-Known independent Release failure: Vorbis audio
----------------------------------------------
-The full Release run crashes with SIGSEGV when Vorbis audio decoding starts.
-It reproduces on BOTH architectures with the published dependencies:
+Vorbis Release regression: fixed in Audio.Core, pending publication
+-----------------------------------------------------------------
+The original full Release run crashed with SIGSEGV when Vorbis decoding began.
+It reproduced on BOTH architectures with these published dependencies:
   VideoPlayback.MitLicenseForever 1.0.271.97
   Audio.Core.MitLicenseForever 1.0.269.1270
   Audio.Android.ApacheLicenseForever 1.0.270.1181
@@ -88,10 +93,31 @@ Use test-apk.py --audio-only with the Release APK to reproduce WITHOUT loading
 or calling dav1d. That diagnostic first plays silent PCM successfully, then
 extracts the Vorbis track's packets from the existing WebM and calls Audio.Core's
 IPacketSoundDecoder.DecodePacket directly. The process crashes during that
-standalone decode too. This isolates the failure from AV1 decoding, video
-presentation, and the video session; the underlying Vorbis/runtime cause has
-not been diagnosed or fixed in this repo. It prevents claiming full Release
-playback with Vorbis audio despite successful Dav1d validation.
+standalone decode too. A further Core-only Android app in the sibling
+CodeBrix.Audio repository reproduced the crash with NO backend or codec package
+referenced. Variable negative offsets in the managed Vorbis MDCT lost their
+sign on the optimized Mono path. Five offsets now explicitly use signed
+native-sized arithmetic. The Core-only numerical regression checks and full
+playback with Audio.Android both pass on ARM64 and x64 with the fixed package.
+
+Core 1.0.271.274 is a LOCAL validation build, not a published dependency pin.
+Neither Audio.Android nor Opus required a source or native-library change.
+Publish fixed Core and select it in the app, directly or through an updated
+platform-package dependency. Until then, the default published dependencies
+above still reproduce the Release crash. To validate a local Core build, copy
+its nupkg and the Dav1d nupkg into one local feed directory and build with:
+
+  dotnet build tests/CodeBrix.VideoPlayback.Dav1d.AndroidTests -c Release \
+    -p:Dav1dPackageVersion=DAV1D_VERSION \
+    -p:AudioCoreVersion=FIXED_CORE_VERSION \
+    -p:RestoreAdditionalProjectSources=/path/to/combined-local-feed \
+    -p:AndroidSdkDirectory="$HOME/Android/Sdk" \
+    -p:JavaSdkDirectory=/usr/lib/jvm/java-21-openjdk-amd64
+
+Then run test-apk.py normally on each authorized device. Verify the resolved
+Core version in obj/project.assets.json; the app also writes its loaded Core
+assembly version to progress.txt. No platform package pins need to change for
+this local test.
 
 Use test-apk.py --codec-only to run the Dav1d and video-only checks independently.
 The default remains the full integration suite: a Vorbis crash is reported as
