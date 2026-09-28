@@ -6,6 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The consuming desktop test application supplies the audio backend. The library depends only on Core. -->
+    <PackageReference Include="CodeBrix.Audio.MitLicenseForever" Version="1.0.269.1270" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
       <PrivateAssets>all</PrivateAssets>

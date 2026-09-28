@@ -12,7 +12,7 @@ any build or pack step.
 One folder per runtime identifier, mirroring runtimes/<rid>/native/ in the
 package tree:
 
-  <rid>/libdav1d.so       the pre-strip ELF (Linux)
+  <rid>/libdav1d.so       the pre-strip ELF (Linux and Android)
   <rid>/libdav1d.dylib    the pre-strip Mach-O (macOS)
   <rid>/libdav1d.dylib.dSYM/
                           the macOS debug-symbol bundle
@@ -21,7 +21,7 @@ Verify any file two ways:
 
   1. sha256 matches the "SHA256 unstripped" line of that RID's entry in
      ../BUILD-PROVENANCE.txt (and SHA256SUMS beside this file).
-  2. Linux: the GNU build-id equals the shipped binary's -
+  2. Linux and Android: the GNU build-id equals the shipped binary's -
         readelf -n <here>/libdav1d.so
         readelf -n ../../src/CodeBrix.VideoPlayback.Dav1d/runtimes/<rid>/native/libdav1d.so
      macOS: the LC_UUID equals the shipped dylib's (dwarfdump --uuid).
@@ -32,6 +32,12 @@ twin's on 2026-09-01):
   linux-x64      e4c21b208368cd36807c52b8cd9282d506ccc5e1
   linux-arm64    6de1abac61d97a721e7079bf633427a893319f3c
   linux-riscv64  b572c681063f2af65f677118f9d86c189d97afbb
+
+Build-ids of the Android binaries (verified against their shipped twins on
+2026-09-28 UTC; each unstripped binary includes DWARF debug information):
+
+  android-arm64  8a9abe9d71b7d83e605446cb082e86bf39a76b7a
+  android-x64    9fa4d2ba92515923c38553edea54750973f40834
 
 LC_UUIDs of the stored macOS slices (each verified equal to its shipped twin's
 on 2026-09-05, when these files were copied here from the Mac's output/ tree):

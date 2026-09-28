@@ -22,19 +22,20 @@ XML documentation (IntelliSense) ships alongside the assembly.
 
 The package pulls in the following automatically; no version pinning is needed in the consuming project:
 
-* `CodeBrix.VideoPlayback.MitLicenseForever` - the playback session, the container readers and the frame-buffer pool. It brings `CodeBrix.Audio.MitLicenseForever` with it for the audio side.
+* `CodeBrix.VideoPlayback.MitLicenseForever` - the playback session, the container readers and the frame-buffer pool. It brings the platform-neutral `CodeBrix.Audio.Core.MitLicenseForever` audio contracts.
 
-The native decoder libraries for all seven supported platforms travel inside this package, so there is no native-asset package to add.
+The native decoder libraries for all nine supported runtime identifiers travel inside this package, including Android 13/API 33 and newer on ARM64 and x64. There is no separate native-asset package to add.
 
-Two packages this one does NOT bring, and an application usually needs:
+An application supplies the following as needed:
 
-* A PRESENTER, to draw the decoded frames - `CodeBrix.VideoPlayback.Skia.MitLicenseForever` for a SkiaSharp application, or the CodeBrix.Platform video player element. Without one, frames are decoded and never shown.
-* `CodeBrix.Audio.Opus.BsdLicenseForever`, when the files carry Opus audio. Vorbis audio needs nothing extra.
+* A presenter to draw the decoded frames. Desktop applications can use `CodeBrix.VideoPlayback.Skia.MitLicenseForever` or the CodeBrix.Platform video player element. Android applications supply an Android-compatible presenter; the Skia and Authoring companions are outside this package's Android support.
+* An audio output backend: `CodeBrix.Audio.MitLicenseForever` on Windows, Linux or macOS, or `CodeBrix.Audio.Android.ApacheLicenseForever` on Android. Video-only playback does not require an audio backend.
+* `CodeBrix.Audio.Opus.BsdLicenseForever`, when the files carry Opus audio. Vorbis decoding is already provided by Audio.Core.
 
 ## CodeBrix.VideoPlayback.Dav1d supports:
 
 * AV1 decoding for WebM, Matroska and the `.cbv` container, wherever CodeBrix.VideoPlayback can read them
-* Native decoder libraries for seven platforms - Windows x64 and ARM64, macOS Intel and Apple Silicon, and Linux x64, ARM64 and RISC-V 64 - found automatically, whether an application publishes for one runtime or for none
+* Native decoder libraries for nine runtime identifiers - Windows x64 and ARM64, macOS Intel and Apple Silicon, Linux x64, ARM64 and RISC-V 64, and Android 13+ x64 and ARM64 - found automatically
 * A zero-copy frame path: the decoder writes decoded pictures straight into the playback session's own frame-buffer pool, so there is no copy between the decoder's output and a graphics upload, and no buffer allocation at all once playback is warm
 * A sequence-header probe - `Dav1dDecoderFactory.TryProbe` - describing a stream's dimensions, layout, bit depth and colour before a single frame is decoded, so a host can size its surface first
 * 8, 10 and 12-bit content, in 4:2:0, 4:2:2, 4:4:4 and monochrome, with film grain synthesised by the decoder and HDR metadata carried through to the frame
@@ -61,6 +62,21 @@ session.Play();
 ```
 
 That is the whole of the integration. CodeBrix.VideoPlayback ships no video decoder of its own - a decoder brings a licence and a set of native binaries that not every application wants - so an application that plays AV1 references this package and makes one call.
+
+### Android
+
+Use a .NET 10 Android application with minimum Android version 33 and runtime identifiers `android-arm64` and/or `android-x64`. NuGet and the .NET Android SDK package `libdav1d.so` into the selected APK ABIs (`arm64-v8a` and `x86_64`). No manual native-library copy is needed. The libraries target API 33 using NDK r30 and have 16 KB ELF load alignment for newer Android devices.
+
+For audio, add `CodeBrix.Audio.Android.ApacheLicenseForever` and initialize its backend before opening any playback session:
+
+```csharp
+CodeBrix.Audio.Android.CodeBrixAndroidAudio.Initialize(applicationContext);
+CodeBrixVideoPlaybackDav1d.Register();
+```
+
+An Opus track additionally needs `CodeBrix.Audio.Opus.BsdLicenseForever` and `CodeBrix.Audio.Opus.CodeBrixAudioOpus.Register()`. The application supplies the visual presenter.
+
+Decoder checks and AV1 + Opus playback pass on Android 13 ARM64 and x64 in Debug and Release. The published audio dependencies currently have a separate Release Vorbis decoding crash, reproducible without loading dav1d; see the [Android validation notes](https://github.com/ellisnet/CodeBrix.VideoPlayback.Dav1d/blob/main/tests/CodeBrix.VideoPlayback.Dav1d.AndroidTests/README.txt) for versions and reproduction steps.
 
 ### Describe a stream before anything is decoded
 

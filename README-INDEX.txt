@@ -13,7 +13,8 @@ AGENT-README FILES (consumer documentation, one per NuGet package)
       CodeBrix.VideoPlayback.Dav1d.BsdLicenseForever - AV1 video decoding for
       CodeBrix.VideoPlayback, through a binding over the dav1d decoder, with
       self-built native libraries for Windows x64 and ARM64, macOS Intel and
-      Apple Silicon, and Linux x64, ARM64 and RISC-V 64. Covers the one
+      Apple Silicon, Linux x64, ARM64 and RISC-V 64, and Android 13+ ARM64 and
+      x64. Covers the one
       Register() call an application makes, the decoder options, the
       sequence-header probe that describes a stream before anything is decoded,
       and the pitfalls - back-pressure, film grain and checksums, the frame-size
@@ -36,7 +37,7 @@ MAINTAINER AND EXTRAS
       pin must name a version that exists on nuget.org.
   EXTRAS-README.txt
       The three folders that never ship: dav1d-native-tools (everything needed to
-      build the seven native libraries, self-contained), its test-vectors (the
+      build the nine native libraries, self-contained), its test-vectors (the
       six conformance streams and their expected hashes, used by both the native
       builds and the managed suite), and tests/assets (the WebM files the
       end-to-end tests play).
@@ -67,7 +68,11 @@ ALSO WORTH READING, IN PLACE
   tests/assets/ASSETS.txt
       The end-to-end playback files, and the opt-in switch for the audible test.
 
-  The per-platform build READMEs - dav1d-native-tools/linux/, macos/, windows/,
+  tests/CodeBrix.VideoPlayback.Dav1d.AndroidTests/README.txt
+      Building and running the NuGet-consuming Android validation app on an
+      explicitly selected device, separately from the desktop solution.
+
+  The per-platform build READMEs - dav1d-native-tools/linux/, macos/, windows/, android/,
   and the ones in patches/ and output/ - are reached through
   dav1d-native-tools/README.txt, which says which to read for the machine you
   are on.

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- This test app allows adb run-as to read results from Debug and trimmed/AOT Release builds. -->
+  <application android:debuggable="true" android:allowBackup="false" />
+</manifest>

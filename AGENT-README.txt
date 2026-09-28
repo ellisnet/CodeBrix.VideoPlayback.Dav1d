@@ -7,8 +7,9 @@ OVERVIEW
 ========
 This package teaches CodeBrix.VideoPlayback how to decode AV1 video. It is a
 binding over dav1d, the reference software AV1 decoder, and it ships the native
-dav1d libraries for all seven platforms the family supports: Windows x64 and
-ARM64, macOS Intel and Apple Silicon, and Linux x64, ARM64 and RISC-V 64.
+dav1d libraries for nine runtime identifiers: Windows x64 and ARM64, macOS Intel
+and Apple Silicon, Linux x64, ARM64 and RISC-V 64, and Android 13/API 33 or newer
+on ARM64 and x64.
 
 CodeBrix.VideoPlayback deliberately ships no video decoder of its own, because a
 decoder carries a licence and a set of native binaries that not every
@@ -32,21 +33,52 @@ INSTALLATION
     dotnet add package CodeBrix.VideoPlayback.Dav1d.BsdLicenseForever
 
 The package brings CodeBrix.VideoPlayback.MitLicenseForever with it, which in
-turn brings CodeBrix.Audio.MitLicenseForever. Those three are the whole of what
-a video player needs to READ and DECODE a file.
+turn brings CodeBrix.Audio.Core.MitLicenseForever. Audio.Core supplies the
+platform-neutral audio contracts and Vorbis decoder. The consuming application
+adds CodeBrix.Audio.MitLicenseForever for desktop audio output, or
+CodeBrix.Audio.Android.ApacheLicenseForever for Android audio output.
 
-Two things this package does NOT bring, and an application usually needs:
+In addition to the platform audio backend, applications usually need:
 
   * A PRESENTER - something to draw the frames. Either
     CodeBrix.VideoPlayback.Skia.MitLicenseForever for a SkiaSharp application, or
     the CodeBrix.Platform video player element for a CodeBrix.Platform
-    application. Without one, frames are decoded and never shown.
+    application. On Android supply an Android-compatible presenter; the Skia
+    and Authoring companions are outside this package's Android support.
+    Without a presenter, frames are decoded and never shown.
   * An OPUS DECODER, if the files carry Opus audio:
     CodeBrix.Audio.Opus.BsdLicenseForever. Vorbis audio needs nothing extra.
 
 The native libraries arrive automatically. For an ordinary build they land in
 runtimes/<rid>/native/ beside the application; for a runtime-specific publish
 the build system copies the one that is needed. Both layouts are found.
+Android uses its native loader to open the library packaged inside the APK.
+
+ANDROID
+========
+The managed assembly remains net10.0. A .NET 10 Android application should set
+SupportedOSPlatformVersion to 33.0 and RuntimeIdentifiers to android-arm64 and/or
+android-x64. The Android SDK selects the NuGet native assets automatically;
+there is no manual AndroidNativeLibrary item or copy step for package consumers.
+The binaries are built with NDK r30, targeting API 33, with 16 KB ELF load
+alignment. Neither 32-bit Android nor Android below API 33 is supported.
+
+Before opening a session that plays audio, initialize the Android backend:
+
+    CodeBrix.Audio.Android.CodeBrixAndroidAudio.Initialize(applicationContext);
+    CodeBrixVideoPlaybackDav1d.Register();
+
+For Opus tracks also reference CodeBrix.Audio.Opus.BsdLicenseForever and call
+CodeBrix.Audio.Opus.CodeBrixAudioOpus.Register(). Video-only playback can use
+VideoPlaybackOptions.PlayAudio = false without an audio backend. Rendering is
+provided by the consuming application.
+
+Validation limitation (2026-09-28 UTC): AV1 decoder and video-only checks pass
+on Android 13 ARM64/x64 in Debug and trimmed/AOT Release. Vorbis audio passes
+in Debug but crashes in Release with Audio.Core 1.0.269.1270 and Audio.Android
+1.0.270.1181. Standalone Vorbis packet decoding reproduces it without loading
+dav1d; full Release Vorbis playback is not verified. The repository's Android
+test-app README records the reproduction and dependency versions.
 
 KEY NAMESPACES / USINGS
 =======================

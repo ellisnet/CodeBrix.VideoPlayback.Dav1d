@@ -16,14 +16,15 @@ Common to every entry below
   Source          : dav1d-native-tools/dav1d/ - vendored upstream snapshot
   dav1d version   : 1.5.4  (git describe 1.5.4-1-g52b9d3d3)
   dav1d commit    : 52b9d3d3ec525f5a20849145fa0e879d585f4911
-  API version     : 7.0.0  -> soname libdav1d.so.7
+  API version     : 7.0.0  -> Linux soname libdav1d.so.7; Android libdav1d.so
   Licence         : BSD-2-Clause (dav1d/COPYING, shipped as LICENSE-Dav1d.txt beside every
                     binary; see ../THIRD-PARTY-NOTICES.txt)
   Patches applied : NONE. The vendored source is unmodified upstream.
   meson options   : --buildtype=release -Ddefault_library=shared -Dbitdepths=8,16
                     -Denable_asm=true -Denable_tools=true -Denable_tests=false
                     -Denable_examples=false -Dxxhash_muxer=disabled
-                    (Windows adds -Db_vscrt=static_from_buildtype)
+                    (Windows adds -Db_vscrt=static_from_buildtype; Android adds
+                    -Ddebug=true -Denable_docs=false --wrap-mode=nodownload)
   Reproducibility : the three linux-* RIDs were each built three times from
                     scratch on 2026-08-28 (twice separately, once through a full
                     `./build.sh` run) and produced a byte-identical library every
@@ -45,7 +46,8 @@ Common to every entry below
                     passed. So: the sha256 below is exact for the three linux-*
                     RIDs and for osx-arm64, and is a record of one particular
                     build for osx-x64, win-x64 and win-arm64. For those three,
-                    compare size and gate result, not the hash.
+                    compare size and gate result, not the hash. Android repeat-
+                    build byte reproducibility has not been established.
   Conformance     : all seven decodes in test-vectors/EXPECTED.md5 must match.
                     The expected hashes are architecture-independent, so the
                     same seven values appear under every RID below:
@@ -358,3 +360,57 @@ Gate             : architecture ok, 17/17 exports, install name ok, system-only
                    conformance decodes matched
 Adopted into runtimes/osx-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
                    beside it as LICENSE-Dav1d.txt; signature re-verified after the copy
+
+================================================================================
+android-arm64 and android-x64 - Android 13/API 33 minimum
+================================================================================
+Built            : 2026-09-28 UTC (2026-09-27 local), Linux x64 host
+Script           : android/build.py, generated NDK crossfiles; no source patches
+Container        : localhost/codebrix-dav1d-build-x86_64:latest, built from
+                   linux/Containerfile.x86_64 and the digest-pinned manylinux
+                   base in linux/pins.env; run with --network none
+NDK              : 30.0.16248370, mounted read-only into the container
+Compiler         : Android clang 21.0.0, build 16134705, based on r574158c
+                   aarch64-linux-android33-clang / x86_64-linux-android33-clang
+meson / ninja    : 1.12.0 / 1.13.0.git.kitware.jobserver-pipe-1
+nasm             : 2.15.03 (x64 only)
+Options          : common release/shared/ASM/8,16-bit-depth options above, plus
+                   debug information retained in the unstripped twin, source
+                   prefix maps, -z max-page-size=16384, common-page-size=16384,
+                   --build-id=sha1. llvm-strip --strip-unneeded for the package.
+File / SONAME    : libdav1d.so / libdav1d.so (unversioned)
+Dependencies     : libc.so only, both architectures (Android Bionic)
+Minimum Android  : API 33 in compiler target, sysroot and ELF Android note
+PT_LOAD alignment: 16384 for all load segments on both architectures
+Static gates     : ELF64, target machine, API, SONAME, all 17 managed import
+                   exports, system-only dependencies, no GLIBC requirements,
+                   no TEXTREL/RPATH/RUNPATH, no writable/executable segments;
+                   layout-check.c sizes/offsets match the managed ABI; stripped
+                   and unstripped build IDs match. All passed for both ABIs.
+
+android-arm64
+-------------
+Size stripped    : 765,352 bytes
+SHA256           : 1d80a211eb0287e4c1261978d6f46111ef160cecd6b557b8420adde38bc9e955
+SHA256 unstripped: 0c6fd12fe9402993ae49c97cf03b33f6660b5d895dbe90b432280f43847438d2
+Build ID         : 8a9abe9d71b7d83e605446cb082e86bf39a76b7a
+Native gate      : Samsung SM-G781U1, arm64-v8a, Android 13/API 33, 4096-byte
+                   pages: smoke test API 7.0.0/open/close passed; all seven
+                   EXPECTED.md5 decodes passed (including grain on and off).
+
+android-x64
+-----------
+Size stripped    : 1,679,640 bytes
+SHA256           : 98c573f888a058c6a6a0033964de182050ab26635f7ae13347be758e2089101f
+SHA256 unstripped: 63cbde729c70dc7a8ab2b9bfc16f81230ec644cfed6431e927f54635c4ac99bb
+Build ID         : 9fa4d2ba92515923c38553edea54750973f40834
+Native gate      : HP 87FE laptop, x86_64, Android 13/API 33, 4096-byte pages:
+                   smoke test API 7.0.0/open/close passed; all seven
+                   EXPECTED.md5 decodes passed. No x64 emulator used.
+
+Adopted          : both stripped libraries plus verbatim COPYING files named
+                   LICENSE-Dav1d.txt under runtimes/android-<arch>/native/;
+                   both same-build DWARF twins under unstripped/android-<arch>/.
+Limitations      : actual execution with 16 KB device pages not yet tested.
+Managed checks   : see ../MAINTAINER-README.txt and the AndroidTests README for
+                   the separate NuGet-consuming app and integration results.

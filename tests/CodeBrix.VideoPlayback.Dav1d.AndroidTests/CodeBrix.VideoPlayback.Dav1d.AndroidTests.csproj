@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android36.1</TargetFramework>
+    <SupportedOSPlatformVersion>33.0</SupportedOSPlatformVersion>
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+    <OutputType>Exe</OutputType>
+    <ApplicationId>com.codebrix.dav1d.tests</ApplicationId>
+    <ApplicationTitle>Dav1d validation</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <AndroidManifest>Properties/AndroidManifest.xml</AndroidManifest>
+    <AndroidPackageFormats>apk</AndroidPackageFormats>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CodeBrix.VideoPlayback.Dav1d.BsdLicenseForever" Version="$(Dav1dPackageVersion)" />
+    <PackageReference Include="CodeBrix.Audio.Android.ApacheLicenseForever" Version="1.0.270.1181" />
+    <PackageReference Include="CodeBrix.Audio.Opus.BsdLicenseForever" Version="1.0.269.1352" />
+    <Compile Include="../CodeBrix.VideoPlayback.Dav1d.Tests/Internal/IvfStreamReader.cs" Link="Internal/IvfStreamReader.cs" />
+    <Compile Include="../CodeBrix.VideoPlayback.Dav1d.Tests/Internal/PlanarFrameHasher.cs" Link="Internal/PlanarFrameHasher.cs" />
+    <AndroidAsset Include="../../dav1d-native-tools/test-vectors/*.ivf" Link="vectors/%(Filename)%(Extension)" />
+    <AndroidAsset Include="../../dav1d-native-tools/test-vectors/EXPECTED.md5" Link="vectors/EXPECTED.md5" />
+    <AndroidAsset Include="../assets/*.webm" Link="media/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="RequireDav1dPackageVersion" BeforeTargets="CollectPackageReferences">
+    <Error Condition="'$(Dav1dPackageVersion)' == ''" Text="Pass -p:Dav1dPackageVersion=the-version-of-the-local-package and restore from its local feed. See README.txt." />
+  </Target>
+</Project>

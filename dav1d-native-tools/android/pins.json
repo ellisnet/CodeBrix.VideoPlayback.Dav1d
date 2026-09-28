@@ -1,0 +1,8 @@
+{
+  "ndk": "30.0.16248370",
+  "api": 33,
+  "meson": "1.12.0",
+  "ninja": "1.13.0",
+  "nasm_minimum": "2.14",
+  "source_commit": "52b9d3d3ec525f5a20849145fa0e879d585f4911"
+}

@@ -54,7 +54,7 @@ after the feed is gone is the only evidence that the pin is real.
 PURPOSE AND SCOPE
 ================================================================================
 One project, one package: AV1 decoding for CodeBrix.VideoPlayback, through a
-binding over dav1d, with self-built native libraries for seven platforms.
+binding over dav1d, with self-built native libraries for nine runtime identifiers.
 
     CodeBrix.VideoPlayback.Dav1d.slnx   the solution. Its "Solution Items"
                                         folder carries .gitignore,
@@ -72,8 +72,10 @@ binding over dav1d, with self-built native libraries for seven platforms.
     tests/assets/                       end-to-end playback files
 
 The package's only dependency is CodeBrix.VideoPlayback.MitLicenseForever, which
-brings CodeBrix.Audio.MitLicenseForever with it. Nothing else - no SkiaSharp, no
-Opus, no platform packages.
+brings CodeBrix.Audio.Core.MitLicenseForever with it. Applications choose the
+desktop CodeBrix.Audio or Android CodeBrix.Audio.Android output backend. The
+desktop test project explicitly references CodeBrix.Audio for its opt-in audio
+test. No output backend, SkiaSharp or Opus dependency is added to this package.
 
 
 HARD RULES FOR THIS REPOSITORY
@@ -104,7 +106,7 @@ produces unsafe code and every structure the binding passes to dav1d is handled
 through pointers. The test project sets it too, so tests can read plane memory
 directly.
 
-The seven runtimes/<rid>/native/ folders are packed into the NuGet package AND
+The nine runtimes/<rid>/native/ folders are packed into the NuGet package AND
 copied into the build output - of this project and of anything that references it
 as a project. That is deliberate: it means the test suite exercises exactly the
 runtimes/<rid>/native/ layout the library's own probing has to find, rather than
@@ -169,7 +171,7 @@ The package should contain:
 
     lib/net10.0/CodeBrix.VideoPlayback.Dav1d.dll   and its .xml
     runtimes/{win-x64,win-arm64,osx-x64,osx-arm64,
-              linux-x64,linux-arm64,linux-riscv64}/native/
+              linux-x64,linux-arm64,linux-riscv64,android-arm64,android-x64}/native/
         the native library and a copy of dav1d's COPYING as LICENSE-Dav1d.txt
     README.md  AGENT-README.txt  LICENSE  THIRD-PARTY-NOTICES.txt
     icon-codebrix-128.png
@@ -223,9 +225,9 @@ Licence: BSD-2-Clause, "Copyright (c) 2018-2025, VideoLAN and dav1d authors".
 The pre-strip twin of every shipped binary is COMMITTED under
 dav1d-native-tools/unstripped/<rid>/ (its README.txt has the rule and the
 verification recipe); they exist for crash triage and are shipped nowhere. All
-five are stored - the three Linux twins on 2026-09-01, the two macOS twins
-(each a dylib plus its .dSYM bundle) on 2026-09-05. Windows has none, by
-design.
+seven are stored - the three Linux twins on 2026-09-01, the two macOS twins
+(each a dylib plus its .dSYM bundle) on 2026-09-05, and both Android twins on
+2026-09-28 UTC. Windows has none, by design.
 
 The dav1d API version is 7.0.0. The binding checks that at start-up and refuses
 anything else, because the structure layouts below are pinned to those headers
@@ -326,9 +328,9 @@ be several calls later. So the bytes are copied ONCE, into a block from
 Dav1dInputBufferPool, and dav1d_data_wrap points dav1d at that block with a free
 callback. dav1d does not copy it again.
 
-The blocks are managed byte arrays allocated on the pinned object heap, so their
-addresses never move and no long-lived pinning handle fragments the ordinary
-heap. The free callback may run on any thread; the pool is thread-safe and, like
+The blocks use GC.AllocateUninitializedArray<byte>(..., pinned: true), so their
+addresses never move. CoreCLR uses its pinned object heap; Mono on Android uses
+its pinned-array allocator. The free callback may run on any thread; the pool is thread-safe and, like
 the allocator handle, defers its own teardown until dav1d has given everything
 back.
 
@@ -461,7 +463,45 @@ information at all (see unstripped/README.txt). Do not go looking for .pdb
 files.
 
 
-WHAT REMAINS TO BE VERIFIED, AND WHERE
+ANDROID BUILD AND VALIDATION
+================================================================================
+The Android natives target API 33 using NDK 30.0.16248370, with 16 KB ELF load
+alignment. android-arm64 and android-x64 are separate Bionic builds; desktop
+Linux assets must never be reused for Android. Native source and patches follow
+the same rules as the desktop builds. Read dav1d-native-tools/android/README.txt
+for tool installation, offline builds, target ABI/layout checks and device gates.
+
+The managed assembly stays net10.0. Dav1dLibrary recognizes Android before Linux
+and uses NativeLibrary's existing platform-loader fallback to open the library
+packaged into the APK. The NuGet runtimes convention supplies the native assets;
+package consumers need no custom MSBuild targets or native copy instructions.
+
+tests/CodeBrix.VideoPlayback.Dav1d.AndroidTests is intentionally outside the
+desktop solution. It consumes a locally PACKED package and the published
+Android audio backend, so it verifies actual NuGet-to-APK asset flow. Its README
+contains commands and the integration limitation. Ordinary desktop builds and
+tests still need no Android workload or NDK.
+
+2026-09-28 UTC validation on Android 13/API 33 hardware:
+  ARM64: Samsung SM-G781U1; x64: HP 87FE laptop, Android-x86. Both 4 KB pages.
+  Native smoke/open/close and all seven conformance hashes passed for both.
+  Managed Debug and trimmed/profiled-AOT Release decoder checks passed for both,
+  including all hashes twice, flush/drain, forced GC, zero-copy pointers,
+  retained-frame disposal on another thread, BGRA conversion and video-only
+  session playback/pause/seek. Debug audio integration passed with Vorbis/Opus;
+  Release AV1 + Opus playback also passed on both devices.
+  Desktop regression: 90 tests, 89 passed, 1 documented audible-test skip.
+  No x64 emulator was used. Actual 16 KB page execution remains unverified.
+
+The full Release integration has an independent Vorbis failure: standalone
+Audio.Core packet decoding also SIGSEGVs on both devices with dav1d never
+loaded. See AndroidTests/README.txt for pinned versions and --audio-only repro.
+The default test run reports failure; --codec-only isolates the passing AV1
+tests. Do not describe full Release Vorbis playback as verified until the
+audio/runtime problem is fixed and these checks are rerun.
+
+
+WHAT REMAINS TO BE VERIFIED ON DESKTOP, AND WHERE
 ================================================================================
 The suite below - the conformance hashes, the zero-copy path, the release
 threads, the back-pressure loop, the probe, the 10-bit path, the frame-size
@@ -508,7 +548,7 @@ Two things to watch for specifically on the platforms not yet run:
     (above); the check keys off the OS rather than the architecture, so osx-x64
     will exercise the same branch and is not needed to establish it.
   * THE STRUCTURE OFFSETS. They are the same on every platform this package ships
-    for, because all seven use a 64-bit model in which int and enum are four bytes
+    for, because all nine use a 64-bit model in which int and enum are four bytes
     and a pointer is eight, and no declaration here contains a C long. The layout
     tests are cheap and run everywhere; they are the proof rather than the
     assumption.

@@ -13,7 +13,7 @@ are covered below:
 
   2. THE SHIPPED BINARIES. The package's runtimes/<rid>/native/ folders contain
      libdav1d.so / libdav1d.dylib / dav1d.dll compiled from exactly that source,
-     for seven runtime identifiers.
+     for nine runtime identifiers, including Android ARM64 and x64.
 
 Both are governed by the licences reproduced in full below. Every one of them -
 BSD-2-Clause, ISC, the NetBSD 2-clause variant, and one public-domain header -
@@ -177,8 +177,9 @@ Covers:     dav1d-native-tools/dav1d/src/ext/x86/x86inc.asm
 WHAT WAS INCORPORATED
     The file as upstream dav1d ships it, unmodified. It is a macro header, not
     executable code of its own: every x86 assembly file in dav1d %includes it,
-    so its macros are expanded into the x86 SIMD of the linux-x64, win-x64 and
-    osx-x64 binaries. It contributes nothing to the ARM64 or RISC-V builds.
+    so its macros are expanded into the x86 SIMD of the linux-x64, win-x64,
+    osx-x64 and android-x64 binaries. It contributes nothing to the ARM64 or
+    RISC-V builds.
 
 WHAT WAS OMITTED
     Everything else from x264. No x264 encoder code is present in this

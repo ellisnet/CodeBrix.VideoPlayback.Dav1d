@@ -10,7 +10,7 @@ end-to-end tests play.
 
 dav1d-native-tools/
 ================================================================================
-Everything needed to build the seven native dav1d libraries, and nothing outside
+Everything needed to build the nine native dav1d libraries, and nothing outside
 this repository. That is the rule the folder exists for: no clone, no download,
 no fetch of source or test data during a build. The only things allowed to live
 outside are the tools installed on the build machine - compilers, meson, ninja,
@@ -30,6 +30,9 @@ repository alone, with nothing that may have disappeared in the meantime.
     macos/              build scripts and the x86_64 crossfile, for osx-arm64 and
                         osx-x64 from one Apple Silicon Mac.
     windows/            build scripts for win-x64 and win-arm64.
+    android/            NDK r30 builds targeting API 33 for android-arm64 and
+                        android-x64, ELF/layout verification, and explicit-device
+                        native and managed-APK validation scripts.
     patches/            local changes to the vendored source, if there ever are
                         any. There are none.
     test-vectors/       see below.
@@ -40,9 +43,8 @@ repository alone, with nothing that may have disappeared in the meantime.
                         They exist so a crash dump from a stripped release binary
                         can still be symbolised. Nothing here ships and nothing
                         here is an input to any build or pack step. The three
-                        Linux twins are stored; the two macOS twins are still to
-                        be copied from the Mac, and the Windows builds produce no
-                        debug information to store.
+                        Linux, two macOS and two Android twins are stored. The
+                        Windows builds produce no debug information to store.
     output/             gitignored, and disposable: one build's own working tree
                         - freshly built, stripped and staged libraries, its own
                         transient pre-strip copies, BUILD-INFO.txt and

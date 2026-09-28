@@ -42,7 +42,7 @@ FOLDER MAP
   BUILD-PROVENANCE.txt    what was actually built, when, by what, with what
                           hashes - one section per runtime identifier
   smoke-test.c            the load-and-run verification program. One file, no
-                          dependencies, no build system; all three platforms
+                          dependencies, no build system; all four platforms
                           compile and run it as part of their gate
   .gitignore              re-includes this folder's contents from the root
                           .gitignore (which ignores names that occur inside the
@@ -64,6 +64,9 @@ FOLDER MAP
   linux/                  linux-x64, linux-arm64, linux-riscv64
                           pins.env, build.sh, container-build.sh,
                           Containerfile.<arch>, README.txt
+  android/                android-arm64, android-x64, Android 13/API 33 minimum
+                          pins.json, build.py, verify.py, layout-check.c,
+                          test-device.py, test-apk.py, README.txt
   windows/                win-x64, win-arm64
                           build-common.ps1, build-win-x64.ps1,
                           build-win-arm64.ps1, crossfile-win-arm64.txt,
@@ -88,11 +91,12 @@ WHICH README TO READ
   Building on Linux    -> linux/README.txt
   Building on Windows  -> windows/README.txt
   Building on a Mac    -> macos/README.txt
+  Building for Android -> android/README.txt (NDK on Linux or macOS)
 
 Each one lists the tools to install on that machine, with the exact command,
 and nothing else is needed.
 
-  >>> All seven slices have been built and adopted into the package. SIX of
+  >>> All seven original desktop slices have been built and adopted. SIX of
       them passed their gates in full on 2026-08-29: the three LINUX, both
       macOS, and win-x64. The seventh, win-arm64, is adopted with an incomplete
       gate - see below.
@@ -113,7 +117,7 @@ and nothing else is needed.
       link.exe stamps a timestamp into the image. <<<
 
 
-THE SEVEN RUNTIME IDENTIFIERS
+THE NINE RUNTIME IDENTIFIERS
 --------------------------------------------------------------------------------
   RID             built by                              shipped file
   --------------  ------------------------------------  ------------------
@@ -124,18 +128,23 @@ THE SEVEN RUNTIME IDENTIFIERS
   win-arm64       windows\build-win-arm64.ps1           dav1d.dll
   osx-arm64       macos/build-osx-arm64.sh              libdav1d.dylib
   osx-x64         macos/build-osx-x64.sh                libdav1d.dylib
+  android-arm64   android/build.py --arch arm64 --ndk … libdav1d.so
+  android-x64     android/build.py --arch x64 --ndk …   libdav1d.so
 
-All seven were built and adopted on 2026-08-29: linux-x64, linux-arm64,
+The seven desktop slices were built and adopted on 2026-08-29: linux-x64, linux-arm64,
 linux-riscv64, win-x64, win-arm64, osx-arm64 and osx-x64. win-arm64 alone was
 adopted with its gate deliberately INCOMPLETE - it was cross-built from an x64
 machine, so its smoke test and conformance decodes are UNRUN pending ARM64
 hardware, and BUILD-PROVENANCE.txt says so in those words. BUILD-PROVENANCE.txt
-is the authoritative per-RID record.
+is the authoritative per-RID record. The Android slices were built on
+2026-09-28 UTC using NDK r30 targeting API 33, and both passed the native gates
+on Android 13 devices. See android/README.txt for managed validation as well.
 
-All seven names are UNVERSIONED on purpose: LibraryImport("dav1d") on .NET
+All nine names are UNVERSIONED on purpose: LibraryImport("dav1d") on .NET
 probes for exactly those names and does not follow sonames. The soname
 (libdav1d.so.7 / API 7.0.0) lives inside the file and is recorded in every
-BUILD-INFO.txt.
+BUILD-INFO.txt. Android's SONAME is libdav1d.so (unversioned); its build record
+is BUILD-INFO.json. Both Android slices have 16 KB ELF load alignment.
 
 Every RID folder also gets a LICENSE-Dav1d.txt - a verbatim copy of dav1d's
 COPYING. That is not a nicety: BSD-2-Clause clause 2 requires the copyright

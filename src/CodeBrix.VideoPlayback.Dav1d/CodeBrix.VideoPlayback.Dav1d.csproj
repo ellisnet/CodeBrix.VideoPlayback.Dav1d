@@ -60,7 +60,7 @@
     <Product>CodeBrix.VideoPlayback.Dav1d</Product>
     <Title>CodeBrix.VideoPlayback.Dav1d</Title>
     <Authors>Jeremy Ellis</Authors>
-    <Description>AV1 video decoding for CodeBrix.VideoPlayback. A source-generated binding over the dav1d decoder that decodes straight into the playback session's own frame-buffer pool - no copy between the decoder's output and the graphics upload - with self-built native libraries for Windows x64 and ARM64, macOS Intel and Apple Silicon, and Linux x64, ARM64 and RISC-V 64. One Register() call at start-up makes AV1 playable; nothing else in an application ever names a decoder type.</Description>
+    <Description>AV1 video decoding for CodeBrix.VideoPlayback. A source-generated binding over the dav1d decoder that decodes straight into the playback session's own frame-buffer pool - no copy between the decoder's output and the graphics upload - with self-built native libraries for Windows x64 and ARM64, macOS Intel and Apple Silicon, Linux x64, ARM64 and RISC-V 64, and Android 13+ (API 33+) ARM64 and x64. One Register() call at start-up makes AV1 playable; nothing else in an application ever names a decoder type.</Description>
     <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.VideoPlayback.Dav1d</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ellisnet/CodeBrix.VideoPlayback.Dav1d</RepositoryUrl>
@@ -87,7 +87,7 @@
   </ItemGroup>
 
   <!--
-    The seven native dav1d libraries, each beside a copy of the dav1d COPYING file as LICENSE-Dav1d.txt
+    The nine native dav1d libraries, each beside a copy of the dav1d COPYING file as LICENSE-Dav1d.txt
     (BSD-2-Clause clause 2). They go into the package in the standard NuGet runtimes layout, so
     NuGet gives an application the one native for the platform it is building for, and they are
     ALSO copied into this project's own output - and into the output of anything that references
@@ -99,7 +99,7 @@
   -->
   <ItemGroup>
     <!--
-      The seven committed native libraries, each beside a copy of the dav1d COPYING file as LICENSE-Dav1d.txt
+      The nine committed native libraries, each beside a copy of the dav1d COPYING file as LICENSE-Dav1d.txt
       (BSD-2-Clause clause 2). They are kept out of the SDK's default item globs above and named once here.
     -->
     <_Dav1dNativeLibrary Include="runtimes\**\*" />

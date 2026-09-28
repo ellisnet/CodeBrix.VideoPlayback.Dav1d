@@ -7,7 +7,7 @@ namespace CodeBrix.VideoPlayback.Dav1d.Decoding;
 /// One pinned block of managed memory holding a compressed packet while dav1d reads it.
 /// </summary>
 /// <remarks>
-/// The array is allocated on the pinned object heap, so its address never moves and dav1d can read it
+/// The array uses the runtime's pinned allocation API, so its address never moves and dav1d can read it
 /// directly - no copy into native memory, and no long-lived pinning handle fragmenting the ordinary heap.
 /// The handle here identifies the block to dav1d's free callback and nothing else.
 /// </remarks>

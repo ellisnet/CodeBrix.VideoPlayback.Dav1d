@@ -13,12 +13,16 @@ namespace CodeBrix.VideoPlayback.Dav1d.Interop;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The package ships seven natives in the standard NuGet <c>runtimes/&lt;rid&gt;/native/</c> layout. When an
+/// The package ships nine natives in the standard NuGet <c>runtimes/&lt;rid&gt;/native/</c> layout. When an
 /// application publishes for one runtime identifier, the build system copies the right one beside the
 /// application and the operating system finds it without help. When an application publishes without a
 /// runtime identifier - which is the ordinary case for a library test run, and common for desktop
 /// applications - the natives stay in their <c>runtimes/&lt;rid&gt;/native/</c> folders and nothing looks
 /// there. The resolver installed here does.
+/// </para>
+/// <para>
+/// Android packages the selected library inside the APK. Its native loader locates that library by name;
+/// neither an assembly directory nor a physical file beside the application is required.
 /// </para>
 /// <para>
 /// If nothing can be loaded, the exception lists every path that was tried. A missing native is nearly
@@ -99,11 +103,11 @@ internal static class Dav1dLibrary
             string os = OperatingSystemMoniker();
             string architecture = ArchitectureMoniker();
 
-            if (os == null || architecture == null)
+            if (os == null || architecture == null || (os == "android" && architecture == "riscv64"))
             {
                 throw new Dav1dException(
                     "CodeBrix.VideoPlayback.Dav1d ships native dav1d libraries for Windows (x64, ARM64), macOS "
-                    + "(x64, ARM64) and Linux (x64, ARM64, RISC-V 64); this process is running on "
+                    + "(x64, ARM64), Linux (x64, ARM64, RISC-V 64), and Android 13+ (x64, ARM64); this process is running on "
                     + $"{RuntimeInformation.OSDescription} / {RuntimeInformation.ProcessArchitecture}, which is "
                     + "none of them.");
             }
@@ -329,6 +333,8 @@ internal static class Dav1dLibrary
 
     private static string OperatingSystemMoniker()
     {
+        // Android must be identified before the more general Unix/Linux checks.
+        if (OperatingSystem.IsAndroid()) return "android";
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "win";
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "osx";
         return RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "linux" : null;

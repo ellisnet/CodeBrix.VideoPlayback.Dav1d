@@ -7,7 +7,7 @@ namespace CodeBrix.VideoPlayback.Dav1d.Interop;
 /// <para>
 /// Every value here was read out of a C program compiled against the exact headers vendored in
 /// <c>dav1d-native-tools/dav1d/include/dav1d</c> - dav1d 1.5.4, API 7.0.0 - with <c>sizeof</c> and
-/// <c>offsetof</c>. They are the same on every platform this package ships a native for: all seven use the
+/// <c>offsetof</c>. They are the same on every platform this package ships a native for: all nine use the
 /// LP64 or LLVM Windows 64-bit model in which <c>int</c> and <c>enum</c> are four bytes and a pointer is
 /// eight, and none of the declarations here contain a <c>long</c>.
 /// </para>
