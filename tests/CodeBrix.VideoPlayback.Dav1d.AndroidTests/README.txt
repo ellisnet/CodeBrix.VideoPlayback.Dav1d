@@ -80,8 +80,8 @@ packed Dav1d 1.0.271.248 and the unchanged published Android/Opus dependencies
 listed below. Records: MANAGED-RELEASE-FIXED-CORE.json in each device's output
 directory.
 
-Vorbis Release regression: fixed in Audio.Core, pending publication
------------------------------------------------------------------
+Vorbis Release regression: fixed in Audio.Core
+----------------------------------------------
 The original full Release run crashed with SIGSEGV when Vorbis decoding began.
 It reproduced on BOTH architectures with these published dependencies:
   VideoPlayback.MitLicenseForever 1.0.271.97
@@ -102,9 +102,10 @@ playback with Audio.Android both pass on ARM64 and x64 with the fixed package.
 
 Core 1.0.271.274 is a LOCAL validation build, not a published dependency pin.
 Neither Audio.Android nor Opus required a source or native-library change.
-Publish fixed Core and select it in the app, directly or through an updated
-platform-package dependency. Until then, the default published dependencies
-above still reproduce the Release crash. To validate a local Core build, copy
+The fixed Core is published, and it is the Audio.Core the Dav1d package
+brings in (through its CodeBrix.VideoPlayback dependency), so a current Dav1d
+build selects it without -p:AudioCoreVersion. The older published dependencies
+listed above still reproduce the Release crash. To validate a local Core build, copy
 its nupkg and the Dav1d nupkg into one local feed directory and build with:
 
   dotnet build tests/CodeBrix.VideoPlayback.Dav1d.AndroidTests -c Release \

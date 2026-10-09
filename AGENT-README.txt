@@ -76,9 +76,9 @@ provided by the consuming application.
 Android Release playback with Vorbis audio requires Audio.Core containing the
 signed-offset fix for its managed Vorbis transform. Older Core packages can
 crash during Vorbis decoding on both ARM64 and x64. The correction belongs to
-Audio.Core; selecting the fixed Core alongside Audio.Android is sufficient.
-See the Android validation notes for the tested dependency versions and rollout
-status. AV1 decoding itself does not depend on that audio fix.
+Audio.Core; selecting the fixed Core alongside Audio.Android is sufficient,
+and the Audio.Core version this package brings in carries the fix. See the
+Android validation notes for the tested dependency versions. AV1 decoding itself does not depend on that audio fix.
 
 KEY NAMESPACES / USINGS
 =======================
@@ -266,6 +266,7 @@ Playing a file
 --------------
     using CodeBrix.VideoPlayback;
     using CodeBrix.VideoPlayback.Dav1d;
+    using CodeBrix.VideoPlayback.Frames;
 
     // Once, at start-up.
     CodeBrixVideoPlaybackDav1d.Register();
