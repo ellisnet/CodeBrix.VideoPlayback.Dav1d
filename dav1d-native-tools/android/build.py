@@ -53,13 +53,19 @@ def build(arch, ndk, jobs):
         # Fixed compilation paths keep debug information independent of the scratch directory.
         flags = [f"-ffile-prefix-map={source}=/dav1d", f"-ffile-prefix-map={build_dir}=/dav1d-build",
                  "-fdebug-compilation-dir=/dav1d-build"]
+        # Exploit mitigations, pinned in pins.json (the same values as linux/pins.env). The NDK driver
+        # already passes -z relro -z now; it enables neither the stack protector nor FORTIFY, so all
+        # four are stated here. verify.py reads the result back from the binary.
+        flags += PINS["hardening_c_args"]
+        link_flags = ["-Wl,-z,max-page-size=16384", "-Wl,-z,common-page-size=16384", "-Wl,--build-id=sha1",
+                      *PINS["hardening_link_args"]]
         crossfile.write_text(f"""[binaries]
 c = '{compiler}'
 ar = '{toolchain / 'llvm-ar'}'
 strip = '{toolchain / 'llvm-strip'}'
 [built-in options]
 c_args = {flags!r}
-c_link_args = ['-Wl,-z,max-page-size=16384', '-Wl,-z,common-page-size=16384', '-Wl,--build-id=sha1']
+c_link_args = {link_flags!r}
 [properties]
 needs_exe_wrapper = true
 [host_machine]
@@ -93,6 +99,8 @@ endian = 'little'
                        "clang": output(compiler, "--version").splitlines()[0],
                        "meson": meson, "ninja": ninja, "nasm": nasm,
                        "source_commit": PINS["source_commit"], "meson_options": options,
+                       "hardening_c_args": PINS["hardening_c_args"],
+                       "hardening_link_args": PINS["hardening_link_args"],
                        "patches": [p.name for p in patches], "native_layout": "passed",
                        "unstripped_sha256": sha256(dest / "unstripped/libdav1d.so"),
                        "runtime_tests": "UNRUN - run test-device.py on the target ABI"})

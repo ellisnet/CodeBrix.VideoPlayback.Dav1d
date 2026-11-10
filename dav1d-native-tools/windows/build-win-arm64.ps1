@@ -168,7 +168,15 @@ else {
     Write-Host "  CL=$env:CL  (so meson's compiler probe reports an ARM64 target)"
     $extra += @('--cross-file', $crossFile)
 }
-Invoke-MesonBuild -ScratchDir $scratchDir -BuildDir $BuildRoot -MesonOptions $pins['DAV1D_MESON_OPTIONS'] -ExtraMesonArgs $extra
+# The hardening flags. On the cross route a command-line -Dc_args REPLACES the cross file's c_args
+# rather than adding to it, so the --target the cross file states is repeated in front of them here.
+# (CL carries the target to every compile anyway; this keeps the explicit statement the cross file
+# was written to make.) ADDED 2026-11-07 on Linux - UNRUN on Windows: clang-cl and lld-link both
+# accept /guard:cf, and the gate checks the result.
+$hardeningCArgs = $pins['DAV1D_HARDENING_MSVC_C_ARGS']
+if ($Route -ne 'Native') { $hardeningCArgs = "--target=aarch64-pc-windows-msvc $hardeningCArgs" }
+Invoke-MesonBuild -ScratchDir $scratchDir -BuildDir $BuildRoot -MesonOptions $pins['DAV1D_MESON_OPTIONS'] `
+                  -CArgs $hardeningCArgs -LinkArgs $pins['DAV1D_HARDENING_MSVC_LINK_ARGS'] -ExtraMesonArgs $extra
 Write-Host ''
 
 # ---------------------------------------------------------------------------------------------
@@ -287,6 +295,10 @@ Configuration
 ------------------------------------------------------------------------------
 meson options    : $($pins['DAV1D_MESON_OPTIONS']) -Db_vscrt=static_from_buildtype
                    (static CRT: no Visual C++ Redistributable is required)
+c_args           : $hardeningCArgs
+c_link_args      : $($pins['DAV1D_HARDENING_MSVC_LINK_ARGS'])
+Hardening        : Control Flow Guard DLL characteristic + /GS security cookie
+                   (both checked by the gate)
 AArch64 assembly : assembled by clang-cl directly (no gas-preprocessor, no Perl)
 
 Result

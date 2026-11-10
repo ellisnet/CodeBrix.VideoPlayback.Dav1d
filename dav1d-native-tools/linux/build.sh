@@ -202,6 +202,8 @@ build_arch() {
         -e DAV1D_COMMIT="$DAV1D_COMMIT" \
         -e DAV1D_API_VERSION="$DAV1D_API_VERSION" \
         -e DAV1D_MESON_OPTIONS="$DAV1D_MESON_OPTIONS" \
+        -e DAV1D_HARDENING_ELF_C_ARGS="$DAV1D_HARDENING_ELF_C_ARGS" \
+        -e DAV1D_HARDENING_ELF_LINK_ARGS="$DAV1D_HARDENING_ELF_LINK_ARGS" \
         -e MESON_VERSION="$MESON_VERSION" \
         -e NINJA_VERSION="$NINJA_VERSION" \
         -e GLIBC_MAX_X64="$GLIBC_MAX_X64" \
@@ -238,6 +240,7 @@ echo "container engine : $ENGINE"
 echo "tools folder     : $TOOLS_DIR"
 echo "dav1d            : $DAV1D_VERSION ($DAV1D_DESCRIBE), commit $DAV1D_COMMIT"
 echo "meson / ninja    : $MESON_VERSION / $NINJA_VERSION (pinned)"
+echo "hardening        : c_args '$DAV1D_HARDENING_ELF_C_ARGS', c_link_args '$DAV1D_HARDENING_ELF_LINK_ARGS'"
 echo "mode             : $MODE"
 
 case "$TARGET" in

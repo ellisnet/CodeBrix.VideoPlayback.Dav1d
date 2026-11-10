@@ -64,6 +64,14 @@ device test. test-device.py supplies a separate DEVICE-RESULT.json.
 The build runs verify.py on both twins: machine/ELF class, Android API note,
 16 KB PT_LOAD alignment, SONAME, all managed imports exported, system-only
 dependencies, no text relocations or RPATH/RUNPATH, and matching build IDs.
+Hardening (ADDED 2026-11-07, not yet used for a shipped build): pins.json adds
+-fstack-protector-strong -D_FORTIFY_SOURCE=2 to c_args and -Wl,-z,relro
+-Wl,-z,now to c_link_args. The NDK driver already passes -z relro -z now; it
+enables neither the stack protector nor FORTIFY. verify.py requires
+PT_GNU_RELRO, BIND_NOW and an imported __stack_chk_fail, and records any
+__*_chk fortified imports in BUILD-INFO.json (Bionic checks fewer calls than
+glibc, so they are reported rather than required). The libraries shipped
+today predate this and FAIL that check - they have no stack protector.
 layout-check.c is cross-compiled against the built headers to assert native
 structure sizes and field offsets used by the managed binding.
 

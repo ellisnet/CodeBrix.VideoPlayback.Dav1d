@@ -37,6 +37,7 @@ namespace CodeBrix.VideoPlayback.Dav1d.Decoding;
 internal sealed unsafe class Dav1dFrameAllocator
 {
     private readonly IVideoFrameBufferPool pool;
+    private readonly long frameSizeLimit;
     private readonly object trackingGate = new object();
     private readonly HashSet<int> releaseThreadIds = new HashSet<int>();
 
@@ -44,13 +45,20 @@ internal sealed unsafe class Dav1dFrameAllocator
     private int outstanding = 1;
     private long allocations;
     private long releases;
+    private string lastRefusal;
 
     /// <summary>Creates an allocator over a host pool.</summary>
     /// <param name="bufferPool">The pool decoded frames are written into.</param>
+    /// <param name="frameSizeLimit">
+    /// The largest picture, in luma samples, this allocator rents memory for; zero or less for no limit of
+    /// its own. The decoder passes its configured frame-size limit, so a request dav1d should already have
+    /// refused is refused here too.
+    /// </param>
     /// <exception cref="ArgumentNullException"><paramref name="bufferPool" /> is null.</exception>
-    public Dav1dFrameAllocator(IVideoFrameBufferPool bufferPool)
+    public Dav1dFrameAllocator(IVideoFrameBufferPool bufferPool, long frameSizeLimit = 0)
     {
         pool = bufferPool ?? throw new ArgumentNullException(nameof(bufferPool));
+        this.frameSizeLimit = frameSizeLimit;
         self = GCHandle.Alloc(this);
     }
 
@@ -65,6 +73,18 @@ internal sealed unsafe class Dav1dFrameAllocator
 
     /// <summary>How many pictures have been released.</summary>
     public long Releases => Interlocked.Read(ref releases);
+
+    /// <summary>
+    /// Why the most recent allocation request was refused, or null when none has been since this was last
+    /// taken.
+    /// </summary>
+    /// <returns>The explanation, which is cleared by reading it.</returns>
+    /// <remarks>
+    /// The allocation callback runs inside native code and can only answer with an error number, which
+    /// dav1d then reports as the failure of whichever call it was in. The decoder takes this explanation
+    /// and folds it into the exception it throws, so the message names the value that was refused.
+    /// </remarks>
+    public string TakeLastRefusal() => Interlocked.Exchange(ref lastRefusal, null);
 
     /// <summary>
     /// True to record the managed thread identifier of every release, so a test can show that dav1d really
@@ -139,19 +159,33 @@ internal sealed unsafe class Dav1dFrameAllocator
         }
     }
 
-    private int Allocate(Dav1dPicture* picture)
+    /// <summary>Rents a pool buffer for a picture dav1d is about to decode, and points the picture at it.</summary>
+    /// <param name="picture">The picture dav1d is allocating; its parameters say what shape it wants.</param>
+    /// <returns>0 on success; a negative dav1d error number when the request or the rented buffer is refused.</returns>
+    /// <remarks>
+    /// Internal rather than private so the test suite can hand it deliberately wrong requests and a pool
+    /// that returns the wrong buffer, without needing a native library that misbehaves.
+    /// </remarks>
+    internal int Allocate(Dav1dPicture* picture)
     {
-        VideoPixelLayout layout = MapLayout(picture->Parameters.Layout);
-        if (layout == VideoPixelLayout.Unknown) return Dav1dErrorCodes.Invalid;
+        Dav1dPictureParameters parameters = picture->Parameters;
 
-        int width = picture->Parameters.Width;
-        int height = picture->Parameters.Height;
-        int bitDepth = picture->Parameters.BitsPerComponent;
+        // Nothing dav1d says about the size of the memory it wants is used before it has been checked:
+        // the request against the AV1 format and the frame-size limit, then the rented buffer against the
+        // request, because dav1d will write exactly as much as the request implies.
+        string refusal = Dav1dNativeChecks.CheckAllocationRequest(parameters, frameSizeLimit);
+        if (refusal != null)
+        {
+            Refuse(refusal);
+            return Dav1dErrorCodes.Invalid;
+        }
 
-        if (width <= 0 || height <= 0) return Dav1dErrorCodes.Invalid;
-        if (bitDepth != 8 && bitDepth != 10 && bitDepth != 12) return Dav1dErrorCodes.Invalid;
-
-        VideoFrameBufferDescriptor descriptor = new VideoFrameBufferDescriptor(width, height, layout, bitDepth);
+        VideoPixelLayout layout = MapLayout(parameters.Layout);
+        VideoFrameBufferDescriptor descriptor = new VideoFrameBufferDescriptor(
+            parameters.Width,
+            parameters.Height,
+            layout,
+            parameters.BitsPerComponent);
         VideoFrameBuffer buffer = pool.Rent(descriptor);
         if (buffer == null) return Dav1dErrorCodes.OutOfMemory;
 
@@ -159,6 +193,14 @@ internal sealed unsafe class Dav1dFrameAllocator
         {
             pool.Return(buffer);
             return Dav1dErrorCodes.OutOfMemory;
+        }
+
+        refusal = Dav1dNativeChecks.CheckRentedBuffer(buffer, descriptor);
+        if (refusal != null)
+        {
+            pool.Return(buffer);
+            Refuse(refusal);
+            return Dav1dErrorCodes.Invalid;
         }
 
         picture->Data0 = buffer.Y.Data;
@@ -172,6 +214,8 @@ internal sealed unsafe class Dav1dFrameAllocator
         Interlocked.Increment(ref allocations);
         return 0;
     }
+
+    private void Refuse(string reason) => Volatile.Write(ref lastRefusal, reason);
 
     private void Release(VideoFrameBuffer buffer)
     {

@@ -184,6 +184,21 @@ that fails any check exits non-zero and must not be adopted.
      else. dav1d genuinely has no other dependencies, so anything else means
      something was linked that the user would have to install.
 
+  4b. Hardening - ADDED 2026-11-07 ON LINUX, UNRUN ON A MAC. Both scripts pass
+     -Dc_args='-fstack-protector-strong -D_FORTIFY_SOURCE=2' (pins.env,
+     DAV1D_HARDENING_DARWIN_C_ARGS). `nm -u` must list ___stack_chk_fail; the
+     ___*_chk fortified imports are listed for the record but not required,
+     because Apple's checked variants appear only where the compiler cannot
+     prove a copy safe. The dylibs shipped today already import
+     ___stack_chk_fail (Apple clang's default is the weaker -fstack-protector)
+     and osx-arm64 already imports ___memcpy_chk (the SDK turns FORTIFY on for
+     optimised builds), so on this platform the flags raise the stack
+     protector to the -strong level and make both settings explicit rather
+     than defaults. The import check cannot tell the two protector levels
+     apart; BUILD-INFO.txt records the c_args. Mach-O has no RELRO/BIND_NOW
+     switch to set: dyld's chained fixups and __DATA_CONST already make the
+     bound pointers read-only on macOS 11+.
+
   5. Deployment target - CHECKED against 11.0, not merely reported. See above.
 
   6. Code signature - `codesign -dv` must find one. Apple Silicon refuses to

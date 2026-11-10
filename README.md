@@ -115,6 +115,25 @@ VideoPlaybackOptions options = new VideoPlaybackOptions
 VideoPlaybackSession session = new VideoPlaybackSession(options);
 ```
 
+### Decoding files you did not create
+
+```csharp
+using CodeBrix.VideoPlayback;
+using CodeBrix.VideoPlayback.Dav1d;
+
+VideoPlaybackOptions options = new VideoPlaybackOptions
+{
+    DecoderOptions = new Dav1dDecoderOptions
+    {
+        FrameSizeLimit = 1920L * 1080L,   // refuse anything larger than 1080p
+    },
+};
+```
+
+The decoder refuses any stream whose frames are larger than `FrameSizeLimit` - 8192 by 8192 luma samples unless you set it - so a file that claims enormous dimensions cannot make your application allocate gigabytes. Set it to the largest picture your application actually needs; a refused stream fails with a `Dav1dException` that names the limit.
+
+The binding also checks every size, stride and plane pointer the native decoder reports before a frame reaches your code, and refuses a frame that disagrees with the memory behind it. That is defence in depth, not isolation: the decoder is native code running inside your process. When the input is truly hostile - a server decoding arbitrary uploads, for example - decode in a separate worker process that can be restarted, so a crash or an exploited decoder cannot take the host application down with it or reach its memory.
+
 ## Documentation
 
 The NuGet package includes `AGENT-README.txt`, a complete API reference and usage guide written for AI coding agents - point your agent at that file when it is writing code against this library.

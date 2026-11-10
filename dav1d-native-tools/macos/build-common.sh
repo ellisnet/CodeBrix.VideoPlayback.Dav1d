@@ -81,6 +81,13 @@ dav1d_data_unref
 dav1d_picture_unref
 "
 
+# ----------------------------------------------------------------------------------------------
+# Hardening (pins.env, DAV1D_HARDENING_DARWIN_C_ARGS): -fstack-protector-strong and
+# -D_FORTIFY_SOURCE=2, passed to meson as one -Dc_args by both build scripts. ADDED 2026-11-07 on
+# Linux - UNRUN on a Mac. The variable is required, so a build cannot quietly come out without it.
+# ----------------------------------------------------------------------------------------------
+: "${DAV1D_HARDENING_DARWIN_C_ARGS:?pins.env does not define DAV1D_HARDENING_DARWIN_C_ARGS}"
+
 # The only dynamic dependency a correct build has. Anything else means the package would demand
 # a library be installed on the user's Mac.
 ALLOWED_DYLIBS="/usr/lib/libSystem.B.dylib"
@@ -188,6 +195,22 @@ verify_dylib() {
     else
         gate_pass "dependencies are system-only: $(printf '%s ' $deps)"
     fi
+
+    # 3b. Hardening ------------------------------------------------------------------------------
+    # The stack protector is REQUIRED to show up as an import of ___stack_chk_fail (the shipped
+    # 2026-08-29 dylibs already had it, from Apple clang's weaker default level). FORTIFY is
+    # reported: Apple's checked variants (___memcpy_chk, ...) appear only where the compiler cannot
+    # prove a copy safe, so their absence is not proof the define was ignored. Mach-O has no RELRO /
+    # BIND_NOW to check - dyld's chained fixups and __DATA_CONST cover that on macOS 11+.
+    local imports
+    imports="$(nm -u "$dylib" | awk '{print $NF}' | sort -u)"
+    if printf '%s\n' "$imports" | grep -x '___stack_chk_fail' > /dev/null; then
+        gate_pass "hardening: ___stack_chk_fail imported (stack protector active)"
+    else
+        gate_fail "hardening: ___stack_chk_fail is not imported - -fstack-protector-strong did not take effect"
+    fi
+    FORTIFIED="$(printf '%s\n' "$imports" | grep -E '^___[a-z0-9_]+_chk$' | grep -v '^___stack_chk_fail$' | tr '\n' ' ' | sed 's/ *$//')"
+    echo "  [info] fortified imports: ${FORTIFIED:-none}"
 
     # 4. Deployment target - CHECKED, not merely reported ---------------------------------------
     local minos

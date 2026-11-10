@@ -65,12 +65,24 @@ def verify(library, arch, toolchain):
     imports = (TOOLS.parent / "src/CodeBrix.VideoPlayback.Dav1d/Interop/Dav1dNative.cs").read_text()
     required = set(re.findall(r'EntryPoint = "(dav1d_\w+)"', imports))
     assert required and required <= exports, f"Missing exports: {required - exports}"
+    # Hardening (android/pins.json): full RELRO and an active stack protector are required; the
+    # fortified calls are reported, because Bionic routes far fewer calls through __*_chk than glibc.
+    segments = output(readelf, "--program-headers", "--wide", library)
+    assert "GNU_RELRO" in segments, "No PT_GNU_RELRO segment - -Wl,-z,relro did not reach the linker"
+    assert re.search(r"\(FLAGS\).*BIND_NOW|\(FLAGS_1\).*NOW", dynamic), "No BIND_NOW - partial RELRO only"
+    undefined = set(re.findall(r"^\s*U\s+(\S+?)(?:@\S*)?$",
+                               output(toolchain / "llvm-nm", "-D", "--undefined-only", library), re.M))
+    assert "__stack_chk_fail" in undefined, "__stack_chk_fail not imported - the stack protector is not active"
+    fortified = sorted(name for name in undefined
+                       if re.fullmatch(r"__\w+_chk", name) and name != "__stack_chk_fail")
     notes = output(readelf, "--notes", library)
     build_id = re.search(r"Build ID: (\w+)", notes)
     assert build_id, "Missing build ID"
     return {"rid": "android-" + arch, "api": android_api,
             "load_alignments": alignments, "dependencies": dependencies,
             "required_exports": sorted(required), "build_id": build_id[1],
+            "hardening": {"relro": "full (GNU_RELRO + BIND_NOW)", "stack_protector": "__stack_chk_fail imported",
+                          "fortified_imports": fortified},
             "sha256": sha256(library), "bytes": len(data)}
 
 

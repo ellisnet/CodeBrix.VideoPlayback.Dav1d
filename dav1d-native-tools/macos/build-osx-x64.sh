@@ -97,7 +97,8 @@ echo "--- building ---"
 rm -rf "$BUILD"
 export MACOSX_DEPLOYMENT_TARGET="$MACOS_MIN_VERSION"
 # shellcheck disable=SC2086
-meson setup "$BUILD" "$SCRATCH" --cross-file "$CROSSFILE" $DAV1D_MESON_OPTIONS
+meson setup "$BUILD" "$SCRATCH" --cross-file "$CROSSFILE" $DAV1D_MESON_OPTIONS \
+    "-Dc_args=$DAV1D_HARDENING_DARWIN_C_ARGS"
 ninja -C "$BUILD"
 echo
 
@@ -188,6 +189,8 @@ Patches applied  : $PATCHES_APPLIED
 Configuration
 ------------------------------------------------------------------------------
 meson options    : $DAV1D_MESON_OPTIONS
+c_args           : $DAV1D_HARDENING_DARWIN_C_ARGS
+Hardening        : ___stack_chk_fail imported; fortified: ${FORTIFIED:-none}
 Cross file       : macos/crossfile-x86_64.txt
 Deployment target: MACOSX_DEPLOYMENT_TARGET=$MACOS_MIN_VERSION (checked by the gate)
 

@@ -85,7 +85,7 @@ public sealed unsafe class Dav1dVideoDecoder : IVideoDecoder
         logger = dav1dOptions?.Logger;
 
         self = GCHandle.Alloc(this);
-        allocator = new Dav1dFrameAllocator(options.BufferPool);
+        allocator = new Dav1dFrameAllocator(options.BufferPool, options.FrameSizeLimit);
         pending = (Dav1dData*)NativeMemory.AllocZeroed((nuint)sizeof(Dav1dData));
 
         Dav1dSettings settings = default;
@@ -487,6 +487,20 @@ public sealed unsafe class Dav1dVideoDecoder : IVideoDecoder
                 + "native library and this binding disagree about the layout of a Dav1dPicture.");
         }
 
+        // The frame takes its planes from the pool buffer and its dimensions from the picture, and whoever
+        // reads it walks the one with the other - so they must agree before a frame exists. A disagreement
+        // is refused with an exception rather than handed on as memory to read past the end of.
+        try
+        {
+            Dav1dNativeChecks.ValidatePicture(picture, buffer);
+        }
+        catch (Dav1dException)
+        {
+            lease.ReleasePictureOnly();
+            RecycleUnusedLease(lease);
+            throw;
+        }
+
         int width = picture->Parameters.Width;
         int height = picture->Parameters.Height;
         int bitDepth = picture->Parameters.BitsPerComponent;
@@ -706,6 +720,11 @@ public sealed unsafe class Dav1dVideoDecoder : IVideoDecoder
                 + $"({nameof(VideoDecoderOptions)}.{nameof(VideoDecoderOptions.FrameSizeLimit)}); raise it to "
                 + "play a larger frame, or leave it where it is to refuse one.";
         }
+
+        // The picture allocator can only answer dav1d with an error number; when it refused a request, the
+        // reason it wrote down is the sentence that explains this failure.
+        string refusal = allocator?.TakeLastRefusal();
+        if (!string.IsNullOrEmpty(refusal)) message += $" The picture allocator refused: {refusal}";
 
         string packet = DescribeFailingPacket();
         if (!string.IsNullOrEmpty(packet)) message += $" It was reading {packet}.";

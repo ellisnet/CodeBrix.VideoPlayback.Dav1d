@@ -26,7 +26,9 @@ MAINTAINER AND EXTRAS
       Building, testing, packaging and versioning this repository; the binding's
       design - the picture allocator, the stacked reference counts, the
       back-pressure loop, and the structure layouts pinned to the vendored
-      headers; the provenance of the vendored dav1d source; and what remains to
+      headers; the provenance of the vendored dav1d source; the security
+      re-vendor checklist to run before every publish; what the binding
+      refuses to take on trust from the native library; and what remains to
       be verified on which devices. It also carries the naming rule for the
       per-native licence files - LICENSE-Dav1d.txt, because a file named plainly
       LICENSE collides in a consuming application's output folder - and the

@@ -451,6 +451,14 @@ COMMON PITFALLS TO AVOID
   file above the limit stops playing, with ERANGE and a message naming the
   limit you set.
 
+* THE BINDING CHECKS WHAT THE NATIVE DECODER REPORTS - picture size, layout,
+  bit depth, plane pointers and strides - against the buffer it allocated, and
+  throws a Dav1dException ("...reported a value this binding does not
+  accept...") rather than hand on a frame that disagrees with its memory. A
+  correct native library never trips it. It is not isolation, though: dav1d
+  runs inside your process. For truly hostile input (a server decoding
+  arbitrary uploads), decode in a separate, restartable worker process.
+
 * dav1d's LOG MESSAGES ARRIVE WITH THEIR printf CONVERSIONS UNEXPANDED - you
   will see "Frame size %dx%d exceeds limit %u" rather than the numbers. Expanding
   a C variadic argument list from managed code is not portable across the

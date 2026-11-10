@@ -27,17 +27,18 @@ Verify any file two ways:
      macOS: the LC_UUID equals the shipped dylib's (dwarfdump --uuid).
 
 Build-ids of the stored Linux binaries (each verified equal to its shipped
-twin's on 2026-09-01):
+twin's on 2026-09-01; linux-x64, linux-arm64 and linux-riscv64 replaced by their hardened rebuilds and verified
+again on 2026-11-07):
 
-  linux-x64      e4c21b208368cd36807c52b8cd9282d506ccc5e1
-  linux-arm64    6de1abac61d97a721e7079bf633427a893319f3c
-  linux-riscv64  b572c681063f2af65f677118f9d86c189d97afbb
+  linux-x64      6bf236a21bab8507ccc7c9a3d2b3037206deacea
+  linux-arm64    e058e680b85b0623f52db9343532d240e82318e9
+  linux-riscv64  92a3ca82a7f4dd91ee2c332d0099e329e3b76af0
 
-Build-ids of the Android binaries (verified against their shipped twins on
+Build-ids of the Android binaries (hardened rebuilds adopted 2026-11-07; verified against their shipped twins on
 2026-09-28 UTC; each unstripped binary includes DWARF debug information):
 
-  android-arm64  8a9abe9d71b7d83e605446cb082e86bf39a76b7a
-  android-x64    9fa4d2ba92515923c38553edea54750973f40834
+  android-arm64  540675ea38b3877aaed0fcacb6126849d867e83c
+  android-x64    6ef111f4cb0179531b8337d19d6c9b5a27c2e99f
 
 LC_UUIDs of the stored macOS slices (each verified equal to its shipped twin's
 on 2026-09-05, when these files were copied here from the Mac's output/ tree):

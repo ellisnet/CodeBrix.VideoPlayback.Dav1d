@@ -64,6 +64,10 @@ public sealed class Dav1dDecoderFactory : IVideoDecoderFactory
     /// This is what a host uses to size a surface, choose a texture format or decide whether it wants to
     /// play a file at all, before a single frame has been decoded.
     /// </remarks>
+    /// <exception cref="Dav1dException">
+    /// The native library could not be loaded, or it reported a frame size or bit depth outside the AV1
+    /// format.
+    /// </exception>
     public static bool TryProbe(VideoPacket packet, out VideoStreamInfo info) =>
         TryProbe(packet.Data.Span, out info);
 
@@ -77,7 +81,10 @@ public sealed class Dav1dDecoderFactory : IVideoDecoderFactory
     /// </param>
     /// <param name="info">The stream's dimensions, layout, bit depth and colour; never null.</param>
     /// <returns>True when a sequence header was found and parsed.</returns>
-    /// <exception cref="Dav1dException">The native library could not be loaded.</exception>
+    /// <exception cref="Dav1dException">
+    /// The native library could not be loaded, or it reported a frame size or bit depth outside the AV1
+    /// format - which a correct library never does, and which is refused rather than described.
+    /// </exception>
     public static unsafe bool TryProbe(ReadOnlySpan<byte> data, out VideoStreamInfo info)
     {
         info = VideoStreamInfo.Unknown;
@@ -97,6 +104,10 @@ public sealed class Dav1dDecoderFactory : IVideoDecoderFactory
         }
 
         if (result != 0) return false;
+
+        // The answer sizes a host's surfaces before anything is decoded, so the sizes dav1d reports are
+        // checked against the AV1 format before they are believed.
+        Dav1dNativeChecks.ValidateSequenceHeader(header);
 
         VideoPixelLayout layout = Dav1dFrameAllocator.MapLayout(header.Layout);
         if (layout == VideoPixelLayout.Unknown) return false;

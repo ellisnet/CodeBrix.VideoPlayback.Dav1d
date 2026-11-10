@@ -197,6 +197,18 @@ THE MESON OPTIONS
                        environment; disabled, every build is identical. The md5
                        muxer the gate uses is always built in.
 
+  HARDENING - passed on top of those, from pins.env, as two quoted options:
+    -Dc_args='-fstack-protector-strong -D_FORTIFY_SOURCE=2'
+    -Dc_link_args='-Wl,-z,relro -Wl,-z,now'
+  Stack canaries, glibc's bounds-checked string/stdio variants, and full RELRO
+  (the GOT resolved at load time and then made read-only). A decoder parses
+  untrusted input; these are the standard mitigations for code that does. The
+  manylinux compilers enable NONE of the first three by default and give only
+  partial RELRO (measured; see ../BUILD-PROVENANCE.txt, HARDENING), so they
+  are stated explicitly. _FORTIFY_SOURCE needs optimisation, and
+  --buildtype=release is -O3. They change no configure result: meson run with
+  and without them produced an identical config.h and config.asm.
+
   There is no cross-compiling here, and dav1d's shipped crossfiles in
   ../dav1d/package/crossfiles/ are not used. Each build runs in a container of
   its own architecture (emulated where necessary), so meson sees a native build,
@@ -240,7 +252,15 @@ not be adopted. A binary that compiles is not necessarily a binary that works.
      distributions. (dav1d uses so little of libc that the floors actually come
      out well below the ceiling - 2.14 on x64 in the 2026-08-28 build.)
 
-  5. dlopen smoke test - ../smoke-test.c loads the freshly built library the way
+  5. Hardening - read back from the shipped file rather than trusted from the
+     command line: a PT_GNU_RELRO segment, immediate binding (DT_FLAGS
+     BIND_NOW or DT_FLAGS_1 NOW - without it RELRO is only partial),
+     __stack_chk_fail imported, and at least one glibc __*_chk import.
+     dav1d's default log callback calls vfprintf, which _FORTIFY_SOURCE=2
+     always turns into __vfprintf_chk, so a build where the define took effect
+     cannot come out with none.
+
+  6. dlopen smoke test - ../smoke-test.c loads the freshly built library the way
      .NET does (dlopen + per-symbol lookup, no link-time dependency), resolves
      all 17 entry points, checks dav1d_version() and that dav1d_version_api()
      reports API major 7, then opens and closes a real decoder context - which
@@ -249,7 +269,7 @@ not be adopted. A binary that compiles is not necessarily a binary that works.
      runs under qemu inside the container, so arm64 and riscv64 are genuinely
      executed, not merely compiled.
 
-  6. Conformance - the dav1d CLI built from this same source decodes every
+  7. Conformance - the dav1d CLI built from this same source decodes every
      stream in ../test-vectors/ with `--muxer md5` and the hashes must equal
      ../test-vectors/EXPECTED.md5. This is the check that says the DECODER is
      right. The hashes are identical across all three RIDs by construction: if

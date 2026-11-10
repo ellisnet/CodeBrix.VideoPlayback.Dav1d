@@ -131,10 +131,17 @@ echo
 # ----------------------------------------------------------------------------------------------
 # 3. Build. The options come from pins.env so a build log and the pins can never disagree.
 # ----------------------------------------------------------------------------------------------
+# The hardening flags (pins.env, "Security hardening flags") travel as ONE quoted argument each:
+# meson splits a compiler-argument option on whitespace itself, so the commas inside -Wl,-z,now
+# survive intact. Both are mandatory - a build without them is not the build pins.env describes.
+HARDENING_C_ARGS="${DAV1D_HARDENING_ELF_C_ARGS:?pins.env DAV1D_HARDENING_ELF_C_ARGS was not passed in}"
+HARDENING_LINK_ARGS="${DAV1D_HARDENING_ELF_LINK_ARGS:?pins.env DAV1D_HARDENING_ELF_LINK_ARGS was not passed in}"
+
 echo "--- configuring ---"
-echo "  meson setup $DAV1D_MESON_OPTIONS"
+echo "  meson setup $DAV1D_MESON_OPTIONS -Dc_args='$HARDENING_C_ARGS' -Dc_link_args='$HARDENING_LINK_ARGS'"
 # shellcheck disable=SC2086
-meson setup "$BUILD" "$SCRATCH" $DAV1D_MESON_OPTIONS
+meson setup "$BUILD" "$SCRATCH" $DAV1D_MESON_OPTIONS \
+    "-Dc_args=$HARDENING_C_ARGS" "-Dc_link_args=$HARDENING_LINK_ARGS"
 
 echo
 echo "--- building ---"
@@ -276,6 +283,40 @@ else
     fail "glibc floor $GLIBC_FLOOR is NEWER than the allowed $GLIBC_MAX - this binary would not load on the systems the package promises"
 fi
 
+# 5e0. Hardening - proves the flags in pins.env reached the compiler and the linker, rather than
+#      trusting the command line. Checked on the SHIPPED (stripped) file: strip removes nothing
+#      these checks read.
+#        full RELRO     a PT_GNU_RELRO segment AND immediate binding (DT_FLAGS BIND_NOW or
+#                       DT_FLAGS_1 NOW) - RELRO without BIND_NOW leaves the GOT writable
+#        stack canaries __stack_chk_fail imported (-fstack-protector-strong)
+#        FORTIFY        at least one glibc __*_chk import (-D_FORTIFY_SOURCE=2). dav1d's default
+#                       log callback calls vfprintf, which level 2 always routes to __vfprintf_chk,
+#                       so a build where the define took effect cannot come out with none.
+READELF_SEGMENTS="$(readelf -lW "$LIB")"
+READELF_DYNAMIC="$(readelf -dW "$LIB")"
+IMPORTS="$(nm -D --undefined-only "$LIB" | awk '{print $2}' | sed 's/@.*//' | sort -u)"
+if printf '%s\n' "$READELF_SEGMENTS" | grep -q 'GNU_RELRO'; then
+    pass "hardening: PT_GNU_RELRO present"
+else
+    fail "hardening: no PT_GNU_RELRO segment - -Wl,-z,relro did not reach the linker"
+fi
+if printf '%s\n' "$READELF_DYNAMIC" | grep -E '\(FLAGS\).*BIND_NOW|\(FLAGS_1\).*NOW' > /dev/null; then
+    pass "hardening: immediate binding (BIND_NOW) - full RELRO"
+else
+    fail "hardening: no BIND_NOW / FLAGS_1 NOW - -Wl,-z,now did not reach the linker (partial RELRO only)"
+fi
+if printf '%s\n' "$IMPORTS" | grep -x '__stack_chk_fail' > /dev/null; then
+    pass "hardening: __stack_chk_fail imported (stack protector active)"
+else
+    fail "hardening: __stack_chk_fail is not imported - -fstack-protector-strong did not take effect"
+fi
+FORTIFIED="$(printf '%s\n' "$IMPORTS" | grep -E '^__[a-z0-9_]+_chk$' | grep -v '^__stack_chk_fail$' | tr '\n' ' ' | sed 's/ *$//')"
+if [ -n "$FORTIFIED" ]; then
+    pass "hardening: fortified calls imported: $FORTIFIED"
+else
+    fail "hardening: no __*_chk import - -D_FORTIFY_SOURCE=2 did not take effect"
+fi
+
 # 5e. dlopen smoke test - loads the library the way .NET does and drives the real entry points.
 echo "  --- dlopen smoke test ---"
 cc -O2 -o /tmp/smoke-test "$WORK/smoke-test.c" -ldl
@@ -387,6 +428,8 @@ Patches applied  : $PATCHES_APPLIED
 Configuration
 ------------------------------------------------------------------------------
 meson options    : $DAV1D_MESON_OPTIONS
+c_args           : $HARDENING_C_ARGS
+c_link_args      : $HARDENING_LINK_ARGS
 
 Result
 ------------------------------------------------------------------------------
@@ -399,6 +442,8 @@ SHA256           : $SHA
 SHA256 unstripped: $SHA_UNSTRIPPED
 glibc floor      : ${GLIBC_FLOOR} (allowed <= ${GLIBC_MAX:-n/a})
 Dynamic deps     : $(printf '%s ' $DEPS)
+Hardening        : PT_GNU_RELRO + BIND_NOW (full RELRO), __stack_chk_fail,
+                   fortified: ${FORTIFIED:-none}
 Licence beside it: LICENSE-Dav1d.txt (a verbatim copy of dav1d's COPYING, BSD-2-Clause)
 
 Conformance (dav1d CLI built from this same source, --muxer md5)

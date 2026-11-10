@@ -36,6 +36,18 @@ subprojects/checkasm.wrap (which would git-clone a test harness), and
 you to supply yourself. See dav1d/UPSTREAM.txt.
 
 
+SECURITY HARDENING
+--------------------------------------------------------------------------------
+A decoder parses untrusted input, so every native is built with the platform's
+standard exploit mitigations, pinned in linux/pins.env and passed to meson by
+every platform's script: stack protector, _FORTIFY_SOURCE=2 and full RELRO on
+Linux and Android, /GS and Control Flow Guard on Windows, the strong stack
+protector and _FORTIFY_SOURCE=2 on macOS. Each gate reads them back out of the
+built binary and fails a build that lacks them. BUILD-PROVENANCE.txt
+("HARDENING") records what each toolchain did by default and which shipped
+binaries carry the flags.
+
+
 FOLDER MAP
 --------------------------------------------------------------------------------
   README.txt              this document

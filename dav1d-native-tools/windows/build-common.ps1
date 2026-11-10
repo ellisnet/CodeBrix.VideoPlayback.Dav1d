@@ -194,6 +194,11 @@ function Invoke-MesonBuild {
         [Parameter(Mandatory)][string] $ScratchDir,
         [Parameter(Mandatory)][string] $BuildDir,
         [Parameter(Mandatory)][string] $MesonOptions,
+        # The hardening flags from pins.env (DAV1D_HARDENING_MSVC_C_ARGS / _LINK_ARGS). Each goes to meson
+        # as ONE argument; meson splits a compiler-argument option on whitespace itself. Mandatory, so a
+        # build cannot quietly come out without them. ADDED 2026-11-07 on Linux - UNRUN on Windows.
+        [Parameter(Mandatory)][string] $CArgs,
+        [Parameter(Mandatory)][string] $LinkArgs,
         [string[]] $ExtraMesonArgs = @()
     )
 
@@ -203,9 +208,14 @@ function Invoke-MesonBuild {
     # shipped DLL needs no Visual C++ Redistributable on the user's machine. Without it, a
     # perfectly good build fails to load on a clean Windows install with an error that says
     # nothing useful about the cause.
+    #
+    # -Dc_args / -Dc_link_args carry the exploit mitigations: /GS (stack cookies - already cl's default,
+    # stated so the record does not depend on that) and /guard:cf (Control Flow Guard), which must be
+    # given to the compiler AND the linker - a DLL linked without it carries no guard table even when
+    # every object was compiled for it. Test-Dav1dBinary reads both back from the built DLL.
     $arguments = @('setup', $BuildDir, $ScratchDir) +
                  ($MesonOptions -split '\s+') +
-                 @('-Db_vscrt=static_from_buildtype') +
+                 @('-Db_vscrt=static_from_buildtype', "-Dc_args=$CArgs", "-Dc_link_args=$LinkArgs") +
                  $ExtraMesonArgs
 
     Write-Host "  meson $($arguments -join ' ')"
@@ -314,6 +324,29 @@ function Test-Dav1dBinary {
     }
     else {
         Add-GatePass "dependencies are system-only: $($dependents -join ' ')"
+    }
+
+    # --- hardening ----------------------------------------------------------------------------
+    # ADDED 2026-11-07 on Linux - UNRUN on Windows. /guard:cf at link time sets the "Control Flow
+    # Guard" DLL characteristic (IMAGE_DLLCHARACTERISTICS_GUARD_CF, 0x4000), which dumpbin /headers
+    # prints in words; /GS leaves a "Security Cookie" entry in the load configuration. Both were read
+    # off the previously shipped DLLs with llvm-readobj: the cookie was there, the guard flag was not.
+    $headerText = ($headers | ForEach-Object { $_.ToString() }) -join "`n"
+    if ($headerText -match 'Control Flow Guard') {
+        Add-GatePass 'hardening: Control Flow Guard DLL characteristic set (/guard:cf)'
+    }
+    else {
+        Add-GateFail 'hardening: no "Control Flow Guard" DLL characteristic - /guard:cf did not reach the linker'
+    }
+    $loadConfigText = (Invoke-Dumpbin @('/nologo', '/loadconfig', $DllPath)) -join "`n"
+    if ($loadConfigText -match 'Security Cookie') {
+        Add-GatePass 'hardening: security cookie present in the load configuration (/GS)'
+    }
+    else {
+        Add-GateFail 'hardening: no security cookie in the load configuration - /GS is not active'
+    }
+    if ($loadConfigText -match '(?m)^\s*([0-9A-Fa-f]+)\s+Guard CF function count') {
+        Write-Host "  guard CF function count: 0x$($Matches[1])"
     }
 
     # --- dlopen (LoadLibrary) smoke test ------------------------------------------------------

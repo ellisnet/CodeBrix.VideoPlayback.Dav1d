@@ -132,7 +132,7 @@ must be able to run the whole suite green.
 
 ONE test class touches process-wide state - the decoder registry - and carries
 [Collection("Process-wide registries")] so that nothing runs beside it:
-CodeBrixVideoPlaybackDav1dTests. The other seven classes carry no collection
+CodeBrixVideoPlaybackDav1dTests. The other classes carry no collection
 attribute, because they register with a SESSION rather than with the process
 (CodeBrixVideoPlaybackDav1d.Register(session)) or construct a decoder through
 the factory directly. A new test that calls the parameterless Register(), or
@@ -240,8 +240,95 @@ README.txt and tests/assets/ASSETS.txt, each of which explains why listing them
 would be a false statement about their origin.
 
 
+SECURITY RE-VENDOR CHECKLIST
+================================================================================
+dav1d is VENDORED: the natives are built from the snapshot in
+dav1d-native-tools/dav1d/, so an upstream security fix reaches this package's
+users only when THIS repository re-vendors, rebuilds and republishes. Nobody
+else will do it. The policy:
+
+  * BEFORE EVERY PUBLISH of this package - whatever the publish is for - check
+    whether upstream has shipped anything since the vendored commit
+    (dav1d-native-tools/dav1d/UPSTREAM.txt names it):
+      - dav1d's releases: the tags and the NEWS file at
+        https://code.videolan.org/videolan/dav1d (mirror:
+        https://github.com/videolan/dav1d). NEWS describes each release; read
+        every entry newer than the vendored one, looking for security,
+        overflow, out-of-bounds, use-after-free, crash and fuzzing fixes.
+      - VideoLAN's security advisories: https://www.videolan.org/security/
+      - published CVEs naming dav1d: https://www.cve.org and
+        https://nvd.nist.gov (search "dav1d").
+    dav1d is fuzzed continuously upstream (OSS-Fuzz); the fixes that matter
+    arrive as ordinary releases or commits, so the release notes are the place
+    to look, not just the CVE lists.
+
+  * WHEN A SECURITY FIX HAS BEEN RELEASED (or exists only as a commit - this
+    repository already vendors a tag-plus-one-commit snapshot when a fix
+    matters, see UPSTREAM.txt), re-vendor and republish. Do not wait for the
+    next feature publish. The steps, in order:
+      1. Re-vendor: replace dav1d-native-tools/dav1d/ with a clean upstream
+         checkout at the chosen tag/commit, using the copy command recorded in
+         UPSTREAM.txt, and rewrite UPSTREAM.txt (tag, commit, dates, API
+         version, why this commit). Update the DAV1D_* pins in linux/pins.env
+         and source_commit in android/pins.json. Re-check the licence inventory
+         in THIRD-PARTY-NOTICES.txt against the new tree.
+      2. Re-run the STRUCTURE-LAYOUT CHECK (DESIGN NOTES, "Structure layouts"):
+         compile the layout program against the new headers and compare with
+         Dav1dNativeLayout; android/layout-check.c does the same for Android
+         during its build. A changed offset is fixed in the managed
+         declarations and in Dav1dNativeLayout together. If the API MAJOR
+         version changed, the start-up API guard refuses the new library until
+         the binding has been reviewed against it - that is intended.
+      3. Rebuild ALL NINE natives with the current scripts (which carry the
+         hardening flags - see dav1d-native-tools/BUILD-PROVENANCE.txt,
+         HARDENING): linux/build.sh for the three Linux RIDs, android/build.py
+         for both Android ABIs, and the Windows and macOS scripts on their
+         machines. Every gate must pass, conformance included. A security
+         re-vendor never ships some RIDs patched and others not.
+      4. Adopt each binary with its unstripped twin in the same commit, and
+         update BUILD-PROVENANCE.txt and unstripped/SHA256SUMS (the platform
+         READMEs' ADOPTING sections have the steps).
+      5. Run the managed suite (Debug and Release) on every platform that can
+         run it, and the Android device gates.
+      6. Republish, with release notes naming the upstream version and the
+         fix it carries.
+
+  * THE HARDENING FLAGS STAY. They are part of the build, not an option: each
+    gate fails a binary that lacks them. If a future toolchain rejects one,
+    fix the build rather than dropping the flag, and record why in
+    BUILD-PROVENANCE.txt.
+
+
 DESIGN NOTES
 ================================================================================
+
+What the binding does not take on trust
+--------------------------------------------------------------------------------
+Every size, stride and pointer the native library reports is checked before the
+binding builds anything from it (Decoding/Dav1dNativeChecks.cs):
+
+  * dav1d's ALLOCATION REQUESTS - layout, bit depth, each dimension within the
+    AV1 format, and the frame-size limit applied a second time - before
+    anything is rented; then the RENTED BUFFER against the request (descriptor,
+    64-byte alignment, strides wide enough, one shared chroma stride), because
+    dav1d writes as much as the request implies. A refusal answers dav1d with
+    EINVAL and leaves its reason with the allocator; the decoder folds that
+    reason into the Dav1dException it throws.
+  * every DECODED PICTURE against the buffer behind it - dimensions, layout,
+    bit depth, plane pointers and strides must be exactly what the allocator
+    wrote - and its frame header's render size against the AV1 limit, before a
+    VideoFrame exists. A frame takes its planes from the buffer and its size
+    from the picture, and whoever reads it walks the one with the other.
+  * the PROBE's sequence header - maximum frame size and bit depth - before a
+    stream description is returned, because hosts size surfaces from it.
+  * the input-packet RELEASE callback's data pointer against the block's own
+    address; a mismatch leaves the block out of circulation rather than
+    recycle memory dav1d might still be reading.
+
+None of these can fire with a correct native library. Each is fenced by a test
+that hands it a deliberately wrong value (Dav1dNativeChecksTests,
+Dav1dFrameAllocatorTests, Dav1dInputBufferPoolTests). Add a check, and a test,
+for any new value the binding starts reading from native memory.
 
 The allocator: how dav1d comes to write into the host's memory
 --------------------------------------------------------------------------------

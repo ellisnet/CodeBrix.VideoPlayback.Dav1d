@@ -20,6 +20,19 @@ executed before that day.
 
   -Route Native (build on an ARM64 Windows machine) has STILL never been run.
 
+  HARDENING - ADDED 2026-11-07 ON LINUX, UNRUN ON WINDOWS. Every build now
+  passes /GS /guard:cf to the compiler and /guard:cf to the linker (pins.env,
+  DAV1D_HARDENING_MSVC_*), and the gate checks the result - see item 4 of THE
+  VERIFICATION GATE. The DLLs shipped today predate this and have Control Flow
+  Guard OFF (read with llvm-readobj: /GS's security cookie is present, the
+  GUARD_CF characteristic is not). One thing to watch on the first hardened
+  run: dav1d's x86 and ARM64 assembly carries no CFG metadata of its own and
+  is reached through function pointers. The linkers are understood to treat
+  the functions of objects without that metadata as valid indirect-call
+  targets, so this is expected to work - but if a conformance decode dies with
+  no output and exit code 0xC0000409 (a fail-fast), suspect Control Flow Guard
+  first, and report it rather than dropping the flag.
+
 Four things needed fixing on that first run. All four fixes are in this folder
 and are described in WHAT THE FIRST REAL RUN ESTABLISHED. Three of them are
 subtle enough that a well-meaning tidy-up would reintroduce them, so the comments
@@ -250,14 +263,22 @@ that fails any check exits non-zero and must not be adopted.
      a Visual C++ Redistributable on every user's machine.
      CONFIRMED on both binaries, 2026-08-29: KERNEL32.dll and nothing else.
 
-  4. LoadLibrary smoke test - ..\smoke-test.c is compiled with cl and run
+  4. Hardening - dumpbin /headers must list the "Control Flow Guard" DLL
+     characteristic (set only when /guard:cf reached the LINKER, not just the
+     compiler), and dumpbin /loadconfig must show a "Security Cookie" (/GS).
+     The guard CF function count is printed for the record. UNRUN on Windows
+     as of 2026-11-07. The same facts can be read on Linux with the NDK's
+     llvm-readobj --file-headers --coff-load-config dav1d.dll
+     (IMAGE_DLL_CHARACTERISTICS_GUARD_CF, SecurityCookie, GuardCFFunctionCount).
+
+  5. LoadLibrary smoke test - ..\smoke-test.c is compiled with cl and run
      against the freshly built DLL. It loads the library the way .NET does
      (LoadLibrary + GetProcAddress, no link-time dependency), resolves all 17
      entry points, checks dav1d_version() and that dav1d_version_api() reports
      API major 7, then opens and closes a real decoder context - which starts
      the worker threads and runs CPU-feature detection.
 
-  5. Conformance - the dav1d.exe built from this same source decodes every
+  6. Conformance - the dav1d.exe built from this same source decodes every
      stream in ..\test-vectors\ with --muxer md5, and the hashes must equal
      ..\test-vectors\EXPECTED.md5. Those values were established by three
      independent decoders and are identical on every architecture; see

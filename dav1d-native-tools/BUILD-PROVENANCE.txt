@@ -25,6 +25,8 @@ Common to every entry below
                     -Denable_examples=false -Dxxhash_muxer=disabled
                     (Windows adds -Db_vscrt=static_from_buildtype; Android adds
                     -Ddebug=true -Denable_docs=false --wrap-mode=nodownload)
+                    plus the hardening flags - see HARDENING below, which also
+                    says which entries were built with them and which were not
   Reproducibility : the three linux-* RIDs were each built three times from
                     scratch on 2026-08-28 (twice separately, once through a full
                     `./build.sh` run) and produced a byte-identical library every
@@ -62,12 +64,66 @@ Common to every entry below
 
 
 ================================================================================
-linux-x64                                                          BUILT + PASSED
+HARDENING  (exploit-mitigation flags; added to every build script 2026-11-07)
 ================================================================================
-Built            : 2026-08-29 01:15 UTC (2026-08-28 local)
+The flags are pinned in linux/pins.env ("Security hardening flags"; Android
+repeats them in android/pins.json) and every build passes them to meson as
+c_args / c_link_args:
+
+  Linux, Android : -fstack-protector-strong -D_FORTIFY_SOURCE=2
+                   -Wl,-z,relro -Wl,-z,now
+  Windows        : /GS /guard:cf  (compile)   /guard:cf  (link)
+  macOS          : -fstack-protector-strong -D_FORTIFY_SOURCE=2
+
+Every build is --buildtype=release (-O3), so _FORTIFY_SOURCE has the
+optimisation it needs. Each gate now PROVES the flags landed, from the binary:
+Linux - PT_GNU_RELRO, BIND_NOW, __stack_chk_fail and at least one __*_chk
+import; Android - the same, with the __*_chk list reported (Bionic routes far
+fewer calls through checked variants); Windows - the Control Flow Guard DLL
+characteristic and a security cookie in the load configuration; macOS -
+___stack_chk_fail imported, with the ___*_chk list reported.
+
+WHAT THE TOOLCHAINS DID BY DEFAULT - measured 2026-11-07, before the flags
+were added, on the then-shipped binaries and on the build images' compilers:
+
+  linux-* (gcc 14.2.1 / 14.3.1, binutils 2.41, manylinux images)
+                   no stack protector, no _FORTIFY_SOURCE defined, PARTIAL
+                   RELRO only (GNU_RELRO present, no BIND_NOW). The shipped
+                   binaries imported no __stack_chk_fail and no __*_chk.
+  android-* (NDK 30.0.16248370 clang)
+                   the driver passes -z relro -z now itself (shipped binaries
+                   have GNU_RELRO + BIND_NOW), but no stack protector and no
+                   _FORTIFY_SOURCE: no __stack_chk_fail, no __*_chk imports.
+  osx-* (Apple clang, shipped 2026-08-29 binaries read with llvm-nm)
+                   both already import ___stack_chk_fail (Apple clang's default
+                   -fstack-protector, the weaker level); osx-arm64 also imports
+                   ___memcpy_chk (the SDK enables FORTIFY for optimised builds).
+  win-* (cl / clang-cl, shipped binaries read with llvm-readobj)
+                   /GS was on (a SecurityCookie in the load configuration);
+                   Control Flow Guard was OFF (no GUARD_CF DLL characteristic,
+                   GuardCFFunctionCount 0).
+
+WHICH SHIPPED BINARIES CARRY THE FLAGS
+  linux-x64, linux-arm64, linux-riscv64
+                 YES - rebuilt and adopted 2026-11-07 (entries below)
+  android-arm64, android-x64
+                 YES - rebuilt and adopted 2026-11-07 after device gates (entry
+                 below; the older 2026-09-28 Android entry is the superseded build)
+  win-x64, win-arm64, osx-arm64, osx-x64
+                 NOT YET - their entries below are the earlier, unhardened
+                 builds. Each is replaced, and this list updated, when it is
+                 rebuilt with the current scripts.
+
+
+================================================================================
+linux-x64                                                BUILT + PASSED (HARDENED)
+================================================================================
+Built            : 2026-11-08 00:03 UTC (2026-11-07 local)
 Built by         : linux/build.sh x64 -> container-build.sh
 Build host       : Dell Precision 7770, LMDE 7, x86_64, podman 5.4.2
-Duration         : 10-11s inside the container
+Duration         : 14s inside the container
+Reproducibility  : built twice from scratch the same day; byte-identical
+                   stripped and unstripped libraries both times
 Network          : DISABLED (--network none; only the loopback interface existed)
 Derived image    : codebrix-dav1d-build-x86_64
 Base image       : quay.io/pypa/manylinux_2_28_x86_64:2026.07.19-1
@@ -78,29 +134,45 @@ Assembler        : GNU as 2.41-4.el8_10.1
 nasm             : NASM 2.15.03
 meson / ninja    : 1.12.0 / 1.13.0 (pinned)
 
+c_args           : -fstack-protector-strong -D_FORTIFY_SOURCE=2
+c_link_args      : -Wl,-z,relro -Wl,-z,now
+
 File             : libdav1d.so       SONAME libdav1d.so.7
-Size (stripped)  : 2,074,952 bytes
-Size (unstripped): 2,952,712 bytes
-Size (xz staged) : 668,504 bytes
-SHA256           : 3084497b81ea9928c6cebe19d8fd88ae0ab56dfa05594624fb9e7c71a41dbf71
-SHA256 unstripped: 78e9278e91deaca52853846892010596898440eb9a13b817f371e7e7b2aa70bd
-glibc floor      : 2.14  (ceiling 2.28)
+Size (stripped)  : 2,090,992 bytes
+Size (unstripped): 2,968,856 bytes
+Size (xz staged) : 670,512 bytes
+SHA256           : 12492826b35b027ad6406b602af348f51c9eecd4fcb0f414df97bf502570e958
+SHA256 unstripped: 4d8fefd70e3af638b89e24496e590d0bb4040fc243eec485158a26425ed1e53b
+Build ID         : 6bf236a21bab8507ccc7c9a3d2b3037206deacea (stripped and unstripped)
+glibc floor      : 2.14  (ceiling 2.28) - the new imports are GLIBC_2.3.4/2.4
 Dynamic deps     : libc.so.6 libdl.so.2 libpthread.so.0
-SIMD present     : yes - 6,788 AVX2/SSSE3/SSE4 symbols in the unstripped binary
+Hardening        : PT_GNU_RELRO + DT_FLAGS BIND_NOW + DT_FLAGS_1 NOW (full
+                   RELRO); imports __stack_chk_fail, __memcpy_chk,
+                   __vfprintf_chk (vfprintf is no longer imported)
+Exports          : identical to the previous (unhardened) build - the same 20
+                   dynamic symbols, compared with nm -D --defined-only
+Configure check  : meson configured with and without the hardening flags
+                   produced an identical config.h, config.asm and set of
+                   compiler/function/header check results
+SIMD present     : yes - the same AVX2/SSSE3/SSE4 symbol count as the previous
+                   build in the unstripped binary
 Gate             : architecture ok, 17/17 exports, ldd -r clean, glibc floor ok,
-                   smoke test passed (API 7.0.0, decoder opened and closed),
-                   7/7 conformance decodes matched
-Adopted into runtimes/linux-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE-Dav1d.txt
+                   hardening ok, smoke test passed (API 7.0.0, decoder opened
+                   and closed), 7/7 conformance decodes matched
+Adopted into runtimes/linux-x64/native/ : YES, 2026-11-07, with dav1d's COPYING
+                   beside it as LICENSE-Dav1d.txt (unchanged), and its
+                   unstripped twin in unstripped/linux-x64/
+Replaces         : the 2026-08-29 unhardened build, sha256 3084497b81ea9928c6ce
+                   be19d8fd88ae0ab56dfa05594624fb9e7c71a41dbf71
 
 
 ================================================================================
-linux-arm64                                                        BUILT + PASSED
+linux-arm64                                                        BUILT + PASSED (HARDENED)
 ================================================================================
-Built            : 2026-08-29 01:15 UTC (2026-08-28 local)
+Built            : 2026-11-08 00:21 UTC (2026-11-07 local)
 Built by         : linux/build.sh arm64 -> container-build.sh
 Build host       : the same x86_64 laptop, under qemu-user emulation (qemu 10.0)
-Duration         : 67s inside the container (85s when run alongside riscv64)
+Duration         : 130s inside the container
 Network          : DISABLED (--network none)
 Derived image    : codebrix-dav1d-build-aarch64
 Base image       : quay.io/pypa/manylinux_2_28_aarch64:2026.07.19-1
@@ -112,31 +184,41 @@ nasm             : not used (x86 only)
 meson / ninja    : 1.12.0 / 1.13.0 (pinned)
 
 File             : libdav1d.so       SONAME libdav1d.so.7
-Size (stripped)  : 919,928 bytes
-Size (unstripped): 1,030,944 bytes
-Size (xz staged) : 300,504 bytes
-SHA256           : 120d0d6287df3c256ec56071d2fdf662b12ee1be746fd4ac961a5f639725d378
-SHA256 unstripped: f8d3c17d0712b5203694cdcdcc17bbb9808240612f2e444680e668157e5c40a1
+Size (stripped)  : 919,568 bytes
+Size (unstripped): 1,030,720 bytes
+Size (xz staged) : 302,572 bytes
+SHA256           : 8e9c945193931925292cd7a3cd5904ce35fd310853aa808e677db17cfa009658
+SHA256 unstripped: dc80a77efdc83b3576efc8caf03c8b57f8b570902933b3aa5c0955aa332aa0eb
+Build ID         : e058e680b85b0623f52db9343532d240e82318e9 (stripped and unstripped)
 glibc floor      : 2.17  (ceiling 2.28)
+Hardening        : PT_GNU_RELRO + BIND_NOW + FLAGS_1 NOW (full RELRO); imports
+                   __stack_chk_fail, __stack_chk_guard, __memcpy_chk, __vfprintf_chk;
+                   c_args -fstack-protector-strong -D_FORTIFY_SOURCE=2
+Exports          : identical to the previous (unhardened) build, compared with
+                   nm -D --defined-only
 Dynamic deps     : libc.so.6 libdl.so.2 libpthread.so.0
 SIMD present     : yes - 1,438 NEON symbols including dotprod and i8mm variants
 Gate             : architecture ok, 17/17 exports, ldd -r clean, glibc floor ok,
+                   hardening ok (RELRO, BIND_NOW, __stack_chk_fail, _chk imports),
                    smoke test passed UNDER EMULATION (the library really ran),
                    7/7 conformance decodes matched, identical to linux-x64
 Note             : emulation exercises the NEON code paths, but qemu is not
                    silicon. Running the managed test suite on real arm64
                    hardware remains worth doing before a release.
-Adopted into runtimes/linux-arm64/native/ : YES, 2026-08-29, with dav1d's
+Adopted into runtimes/linux-arm64/native/ : YES, 2026-11-07, with dav1d's
                    COPYING beside it as LICENSE-Dav1d.txt
 
 
 ================================================================================
-linux-riscv64                                                      BUILT + PASSED
+Replaces         : the 2026-08-29 unhardened build, sha256 120d0d6287df3c256ec56071d2fdf662b12ee1be746fd4ac961a5f639725d378
+
+
+linux-riscv64                                                      BUILT + PASSED (HARDENED)
 ================================================================================
-Built            : 2026-08-29 01:15 UTC (2026-08-28 local)
+Built            : 2026-11-08 00:23 UTC (2026-11-07 local)
 Built by         : linux/build.sh riscv64 -> container-build.sh
 Build host       : the same x86_64 laptop, under qemu-user emulation (qemu 10.0)
-Duration         : 69s inside the container (85s when run alongside arm64)
+Duration         : 156s inside the container
 Network          : DISABLED (--network none)
 Derived image    : codebrix-dav1d-build-riscv64
 Base image       : quay.io/pypa/manylinux_2_39_riscv64:2026.07.19-1
@@ -150,17 +232,24 @@ nasm             : not used (x86 only)
 meson / ninja    : 1.12.0 / 1.13.0 (pinned)
 
 File             : libdav1d.so       SONAME libdav1d.so.7
-Size (stripped)  : 631,272 bytes
-Size (unstripped): 703,520 bytes
-Size (xz staged) : 313,440 bytes
-SHA256           : 6fc64b836cfb245225030c564dabebea94899fb2811ab7ca1bb31535e83ea118
-SHA256 unstripped: b54aa391e884cac4188f2249a5bd73d1cee10bfcbc2c5fbb5761d91edea89180
+Size (stripped)  : 635,392 bytes
+Size (unstripped): 707,800 bytes
+Size (xz staged) : 316,372 bytes
+SHA256           : 557dd0469bc9d62367cae39980330294a643b0c39bd9f4a26337f1795737ba55
+SHA256 unstripped: b9ea355ace92423ed3f1def6cd4d1fdd8568221e2a099f251e751bec5da6db22
+Build ID         : 92a3ca82a7f4dd91ee2c332d0099e329e3b76af0 (stripped and unstripped)
 glibc floor      : 2.34  (ceiling 2.39)
+Hardening        : PT_GNU_RELRO + BIND_NOW + FLAGS_1 NOW (full RELRO); imports
+                   __stack_chk_fail, __stack_chk_guard, __memcpy_chk, __vfprintf_chk;
+                   c_args -fstack-protector-strong -D_FORTIFY_SOURCE=2
+Exports          : identical to the previous (unhardened) build, compared with
+                   nm -D --defined-only
 Dynamic deps     : libc.so.6   (glibc 2.34+ folds libpthread and libdl into libc)
 SIMD present     : YES - 572 RVV symbols in the unstripped binary. -Denable_asm
                    was NOT degraded for this architecture; the vector DSP code is
                    in the shipped library.
 Gate             : architecture ok, 17/17 exports, ldd -r clean, glibc floor ok,
+                   hardening ok (RELRO, BIND_NOW, __stack_chk_fail, _chk imports),
                    smoke test passed UNDER EMULATION, 7/7 conformance decodes
                    matched, identical to linux-x64 and linux-arm64
 Note             : qemu 10 emulates RVV 1.0, so the vector paths did execute
@@ -168,11 +257,14 @@ Note             : qemu 10 emulates RVV 1.0, so the vector paths did execute
                    the RVV code is selected at run time from AT_HWCAP plus
                    dav1d_has_compliant_rvv(), so a board without V simply uses
                    the scalar paths.
-Adopted into runtimes/linux-riscv64/native/ : YES, 2026-08-29, with dav1d's
+Adopted into runtimes/linux-riscv64/native/ : YES, 2026-11-07, with dav1d's
                    COPYING beside it as LICENSE-Dav1d.txt
 
 
 ================================================================================
+Replaces         : the 2026-08-29 unhardened build, sha256 6fc64b836cfb245225030c564dabebea94899fb2811ab7ca1bb31535e83ea118
+
+
 win-x64                                                            BUILT + PASSED
 ================================================================================
 Built            : 2026-08-29 17:13 UTC
@@ -362,7 +454,51 @@ Adopted into runtimes/osx-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
                    beside it as LICENSE-Dav1d.txt; signature re-verified after the copy
 
 ================================================================================
-android-arm64 and android-x64 - Android 13/API 33 minimum
+android-arm64 and android-x64 - HARDENED REBUILD, ADOPTED 2026-11-07
+================================================================================
+Built            : 2026-11-08 UTC (2026-11-07 local), Linux x64 host, same offline
+                   container route, NDK 30.0.16248370, --network none, source
+                   unchanged (commit 52b9d3d3), now with the HARDENING flags
+                   (-fstack-protector-strong -D_FORTIFY_SOURCE=2 -z relro -z now).
+Static gates     : all passed for both ABIs (verify.py incl. PT_GNU_RELRO, BIND_NOW,
+                   __stack_chk_fail import; layout-check passed; 16 KB PT_LOAD
+                   alignment; exports identical to the replaced build).
+Hardening        : arm64 imports __stack_chk_fail and __memcpy_chk; x64 imports
+                   __stack_chk_fail only (no fortified imports).
+Device gates     : test-device.py, smoke test (API 7.0.0, open/close) and all seven
+                   EXPECTED.md5 decodes passed on each ABI, 2026-11-07:
+                   arm64 - Samsung Galaxy Tab S8 SM-X700, serial R52W207XQ1V,
+                     arm64-v8a, Android API 36, 4096-byte pages. NOTE: this is NOT
+                     the SM-G781U1 phone used for the earlier arm64 gate.
+                   x64   - HP 87FE laptop (192.168.86.225:5555), x86_64,
+                     Android 13/API 33, 4096-byte pages (same device as before).
+                   Execution with 16 KB pages remains untested (neither device
+                   offers it); static 16 KB alignment passed.
+                   The AndroidTests NuGet-consumer app was NOT re-run for these
+                   binaries at adoption time.
+
+android-arm64
+-------------
+Size stripped    : 767,920 bytes
+SHA256           : b5dea2b7e86c3ab83b9d0358174253c456021c55756d51eacced057aeba67586
+SHA256 unstripped: af2803b1acd34740e948aa0b4a200d66c9bf28a462147d586098bb7bab07b99a
+Build ID         : 540675ea38b3877aaed0fcacb6126849d867e83c
+Replaced         : 1d80a211eb0287e4c1261978d6f46111ef160cecd6b557b8420adde38bc9e955
+
+android-x64
+-----------
+Size stripped    : 1,679,544 bytes
+SHA256           : 65da1a096f4e1aad210a88ff4f06611d2b0fb80ecb76d7701efcbe672894cbd3
+SHA256 unstripped: a47e56ea73236ce9650d46389f3a612d5b7bffd86d2f1ddd2fd024c1566debc5
+Build ID         : 6ef111f4cb0179531b8337d19d6c9b5a27c2e99f
+Replaced         : 98c573f888a058c6a6a0033964de182050ab26635f7ae13347be758e2089101f
+
+Adopted          : YES, 2026-11-07: both stripped libraries plus LICENSE-Dav1d.txt
+                   under runtimes/android-<arch>/native/; same-build DWARF twins
+                   under unstripped/android-<arch>/.
+
+================================================================================
+android-arm64 and android-x64 - Android 13/API 33 minimum (SUPERSEDED 2026-11-07 build)
 ================================================================================
 Built            : 2026-09-28 UTC (2026-09-27 local), Linux x64 host
 Script           : android/build.py, generated NDK crossfiles; no source patches

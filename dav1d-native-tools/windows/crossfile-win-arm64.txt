@@ -87,6 +87,11 @@ endian = 'little'
 #
 # Harmless, but it is noise in every build log that says nothing true. The link gets its
 # architecture from /MACHINE:arm64 and from the objects themselves.
+#
+# HARDENING (added 2026-11-07, UNRUN on Windows): build-win-arm64.ps1 passes the hardening flags as
+# -Dc_args / -Dc_link_args on the meson command line, and a command-line option REPLACES the value
+# below rather than adding to it - so the script repeats --target=aarch64-pc-windows-msvc in front of
+# /GS /guard:cf. The link side gets only /guard:cf, which lld-link (unlike --target) understands.
 [built-in options]
 c_args = ['--target=aarch64-pc-windows-msvc']
 cpp_args = ['--target=aarch64-pc-windows-msvc']

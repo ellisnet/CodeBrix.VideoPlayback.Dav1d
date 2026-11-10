@@ -104,12 +104,31 @@ internal sealed unsafe class Dav1dInputBufferPool
         try
         {
             if (GCHandle.FromIntPtr(cookie).Target is not Dav1dInputBuffer buffer) return;
-            buffer.Pool.Recycle(buffer);
+
+            // dav1d hands back the data pointer it was given. A block whose address does not match is NOT
+            // recycled: if the native side were confused about which block it has finished with, recycling
+            // this one could hand memory dav1d is still reading to the next packet. Leaking one block is the
+            // safe outcome.
+            if (!buffer.Pool.TryRecycleReleased(buffer, data)) return;
         }
         catch (Exception)
         {
             // Nothing may propagate into native code; dav1d may be releasing this from a frame thread.
         }
+    }
+
+    /// <summary>
+    /// Takes back a block dav1d has released, provided the address it released is the block's own.
+    /// </summary>
+    /// <param name="buffer">The block the release callback's cookie names.</param>
+    /// <param name="data">The data pointer dav1d passed to the release callback.</param>
+    /// <returns>True when the block was taken back; false when the address did not match and it was not.</returns>
+    /// <remarks>Internal so the test suite can release a block with the wrong address.</remarks>
+    internal bool TryRecycleReleased(Dav1dInputBuffer buffer, byte* data)
+    {
+        if (buffer == null || data != buffer.Address) return false;
+        Recycle(buffer);
+        return true;
     }
 
     private void Recycle(Dav1dInputBuffer buffer)

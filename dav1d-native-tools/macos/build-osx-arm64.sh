@@ -71,7 +71,8 @@ rm -rf "$BUILD"
 # BUILD MACHINE's OS version goes in, and the dylib is refused by dyld on every older Mac.
 export MACOSX_DEPLOYMENT_TARGET="$MACOS_MIN_VERSION"
 # shellcheck disable=SC2086
-meson setup "$BUILD" "$SCRATCH" $DAV1D_MESON_OPTIONS
+meson setup "$BUILD" "$SCRATCH" $DAV1D_MESON_OPTIONS \
+    "-Dc_args=$DAV1D_HARDENING_DARWIN_C_ARGS"
 ninja -C "$BUILD"
 echo
 
@@ -164,6 +165,8 @@ Patches applied  : $PATCHES_APPLIED
 Configuration
 ------------------------------------------------------------------------------
 meson options    : $DAV1D_MESON_OPTIONS
+c_args           : $DAV1D_HARDENING_DARWIN_C_ARGS
+Hardening        : ___stack_chk_fail imported; fortified: ${FORTIFIED:-none}
 Deployment target: MACOSX_DEPLOYMENT_TARGET=$MACOS_MIN_VERSION (checked by the gate)
 
 Result

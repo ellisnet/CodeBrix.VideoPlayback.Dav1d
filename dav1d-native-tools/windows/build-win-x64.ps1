@@ -95,7 +95,8 @@ Write-Host "  patches applied: $patchesApplied"
 Write-Host ''
 
 Write-Host '--- building ---'
-Invoke-MesonBuild -ScratchDir $scratchDir -BuildDir $BuildRoot -MesonOptions $pins['DAV1D_MESON_OPTIONS']
+Invoke-MesonBuild -ScratchDir $scratchDir -BuildDir $BuildRoot -MesonOptions $pins['DAV1D_MESON_OPTIONS'] `
+                  -CArgs $pins['DAV1D_HARDENING_MSVC_C_ARGS'] -LinkArgs $pins['DAV1D_HARDENING_MSVC_LINK_ARGS']
 Write-Host ''
 
 # ---------------------------------------------------------------------------------------------
@@ -194,6 +195,10 @@ Configuration
 meson options    : $($pins['DAV1D_MESON_OPTIONS']) -Db_vscrt=static_from_buildtype
                    (static CRT: no Visual C++ Redistributable is required on the
                     user's machine)
+c_args           : $($pins['DAV1D_HARDENING_MSVC_C_ARGS'])
+c_link_args      : $($pins['DAV1D_HARDENING_MSVC_LINK_ARGS'])
+Hardening        : Control Flow Guard DLL characteristic + /GS security cookie
+                   (both checked by the gate)
 
 Result
 ------------------------------------------------------------------------------
