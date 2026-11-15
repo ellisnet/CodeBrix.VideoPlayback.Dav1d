@@ -545,6 +545,15 @@ not match: adopt the fresh build into runtimes/osx-x64/native/ AND store its
 unstripped mate in the same commit (unstripped/README.txt, "THE RULE"), which
 does mean a republish. osx-arm64's UUID is stable across runs.
 
+That is what the 2026-11-15 hardened rebuild did: both macOS slices were
+rebuilt on the Mac with the hardening flags, adopted into runtimes/, and their
+unstripped dylibs and .dSYM bundles from the SAME builds replaced the ones
+above in dav1d-native-tools/unstripped/ (SHA256SUMS updated; the new LC_UUIDs,
+checked equal across shipped dylib, unstripped dylib and .dSYM, are in
+unstripped/README.txt). The hashes and UUIDs listed above are the 2026-08-29
+builds and are kept only as the record of that earlier step. Because the
+shipped binaries changed, this one DOES need a republish.
+
 Windows: NOTHING to store, by design - the release builds emitted no debug
 information at all (see unstripped/README.txt). Do not go looking for .pdb
 files.

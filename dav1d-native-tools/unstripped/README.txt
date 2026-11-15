@@ -40,11 +40,13 @@ Build-ids of the Android binaries (hardened rebuilds adopted 2026-11-07; verifie
   android-arm64  540675ea38b3877aaed0fcacb6126849d867e83c
   android-x64    6ef111f4cb0179531b8337d19d6c9b5a27c2e99f
 
-LC_UUIDs of the stored macOS slices (each verified equal to its shipped twin's
-on 2026-09-05, when these files were copied here from the Mac's output/ tree):
+LC_UUIDs of the stored macOS slices (the hardened rebuilds adopted 2026-11-15;
+each verified equal to its shipped twin's and its .dSYM's that day, when these
+files were copied here from the Mac's output/ tree - they replace the
+2026-08-29 builds, 70E56A37-... and 134196EB-..., stored here on 2026-09-05):
 
-  osx-arm64      70E56A37-E2AB-304E-A4B2-C0C6EC4F3FE6
-  osx-x64        134196EB-C570-3C80-AFAB-11581155E80C
+  osx-arm64      925C13BD-ECDC-341A-A749-06398AB11E3D
+  osx-x64        C60E7725-8746-3072-B1E1-2591D7F6C260
 
 For each RID the unstripped dylib, its .dSYM and the shipped
 runtimes/<rid>/native/libdav1d.dylib all print that one UUID, and the dylib's

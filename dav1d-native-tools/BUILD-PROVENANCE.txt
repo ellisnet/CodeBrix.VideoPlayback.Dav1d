@@ -30,7 +30,8 @@ Common to every entry below
   Reproducibility : the three linux-* RIDs were each built three times from
                     scratch on 2026-08-28 (twice separately, once through a full
                     `./build.sh` run) and produced a byte-identical library every
-                    time. osx-arm64 likewise: four from-scratch runs, one sha256.
+                    time. osx-arm64 likewise: four from-scratch runs, one sha256
+                    (and two more for the 2026-11-15 hardened build, again one).
                     osx-x64 IS THE ONE EXCEPTION and is reproducible only up to
                     its LC_UUID - six runs alternated between two sha256 values
                     differing in exactly 76 bytes (the 16-byte LC_UUID and the
@@ -109,7 +110,11 @@ WHICH SHIPPED BINARIES CARRY THE FLAGS
   android-arm64, android-x64
                  YES - rebuilt and adopted 2026-11-07 after device gates (entry
                  below; the older 2026-09-28 Android entry is the superseded build)
-  win-x64, win-arm64, osx-arm64, osx-x64
+  osx-arm64, osx-x64
+                 YES - rebuilt on the Mac and adopted 2026-11-15 (entries below;
+                 osx-x64 needed a one-line gate fix in macos/build-common.sh,
+                 recorded in its entry)
+  win-x64, win-arm64
                  NOT YET - their entries below are the earlier, unhardened
                  builds. Each is replaced, and this list updated, when it is
                  rebuilt with the current scripts.
@@ -365,93 +370,142 @@ Adopted into runtimes/win-arm64/native/ : YES, 2026-08-29, with dav1d's COPYING
 
 
 ================================================================================
-osx-arm64                                                          BUILT + PASSED
+osx-arm64                                                BUILT + PASSED (HARDENED)
 ================================================================================
-Built            : 2026-08-29 15:58 UTC
-Built by         : macos/build-osx-arm64.sh (native build)
-Build host       : Apple Silicon Mac, macOS 26.5.1 (arm64)
-Duration         : 5s (5-7s observed across runs)
+Built            : 2026-11-15 18:01:43 UTC (2026-11-15 10:01 Pacific)
+Built by         : macos/build-osx-arm64.sh (native build) - script unchanged
+Build host       : Jeremy's Apple Silicon Mac, macOS 27.2.1 (26B131, arm64),
+                   Xcode 27.2 (27B52)
+Duration         : 7s
 Network          : not used - the vendored source, the test vectors and the
                    expected hashes are all files in this repository
-Compiler         : Apple clang version 21.0.0 (clang-2100.1.1.101)
+Compiler         : Apple clang version 21.0.0 (clang-2100.4.1.1)
 Assembler        : clang's integrated assembler (dav1d's AArch64 SIMD is GNU-as
                    syntax, which clang accepts; nasm is not involved)
-meson / ninja    : 1.12.0 / 1.13.2 (meson matches the pin; ninja is newer than
-                   the pinned 1.13.0, with no observed effect)
+meson / ninja    : 1.12.1 / 1.13.2 (Homebrew; both newer than the pinned
+                   1.12.0 / 1.13.0, with no observed effect)
+Source           : dav1d 1.5.4 (1.5.4-1-g52b9d3d3, commit 52b9d3d3), API 7.0.0,
+                   no patches - unchanged from the 2026-08-29 build
+c_args           : -fstack-protector-strong -D_FORTIFY_SOURCE=2
+                   (pins.env DAV1D_HARDENING_DARWIN_C_ARGS)
+Hardening        : ___stack_chk_fail imported (required, [ok]); fortified
+                   ___memcpy_chk (reported). The imports are the same as the
+                   2026-08-29 build's; the -strong level shows in the code:
+                   ___stack_chk_fail call sites (otool -tvV) 80 -> 102.
 
 File             : libdav1d.dylib      install name @rpath/libdav1d.dylib
-Size (stripped)  : 798,304 bytes
-Size (unstripped): 912,176 bytes
-Size (gz staged) : 366,801 bytes
-SHA256           : 3d35c38606a565b530913f05f9cfc6e58fd5f3ce3a8fd52517f29070331482f2
-SHA256 unstripped: 3ea0c3c6f06e777845442df46eeea727cb1949ca2a4be709e8c783f06c0ceeb8
-LC_UUID          : 70E56A37-E2AB-304E-A4B2-C0C6EC4F3FE6 (stable across runs)
+Size (shipped)   : 810,224 bytes (stripped, install name set, ad-hoc signed).
+                   BUILD-INFO.txt says 814,816: the script measures before
+                   install_name_tool and the re-sign (the 2026-08-29 entries
+                   carried the same pre-sign figure)
+Size (unstripped): 928,720 bytes
+Size (gz staged) : 367,170 bytes
+SHA256           : 7f30710bcc3d57a1cb350336b95410db876e41cebf5b5176bd4368d28b6f1f15
+SHA256 unstripped: fdd9af7d3418d1631a14d4414b65e55821ee9072ab3ba84fb8fba245a103323a
+LC_UUID          : 925C13BD-ECDC-341A-A749-06398AB11E3D (stable across runs;
+                   equal in the shipped dylib, the unstripped one and the dSYM)
 Deployment target: 11.0  (checked by the gate, not merely requested)
 Dependencies     : /usr/lib/libSystem.B.dylib only
+Exports          : the same 20 symbols as the 2026-08-29 build (17 required)
 Signature        : ad-hoc (codesign --sign -), applied after strip and
                    install_name_tool because both invalidate a signature
 SIMD present     : yes - 1,443 NEON/SVE/DOTPROD symbols in the unstripped binary
-Reproducibility  : byte-identical across four from-scratch runs
+                   (the same count as 2026-08-29)
+Reproducibility  : built twice from scratch on 2026-11-15; the stripped and the
+                   unstripped dylib were byte-identical both times
 Gate             : architecture ok, 17/17 exports, install name ok, system-only
-                   dependencies, minos 11.0 ok, signature ok, smoke test passed
-                   (API 7.0.0, decoder opened and closed), 7/7 conformance
-                   decodes matched
-Adopted into runtimes/osx-arm64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE-Dav1d.txt; signature re-verified after the copy
+                   dependencies, hardening ok, minos 11.0 ok, signature ok, smoke
+                   test passed (API 7.0.0, decoder opened and closed), 7/7
+                   conformance decodes matched
+Managed proof    : dotnet test (127 tests: 126 passed, 0 failed, 1 skipped - the
+                   opt-in audible-playback test) in Debug AND Release on the build
+                   host (.NET SDK 11.0.100, net10.0 test host, arm64), against this
+                   exact file (sha256 of the copy in the test output's
+                   runtimes/osx-arm64/native/ checked; no stray dylib in the bin
+                   root), 2026-11-15
+Adopted into runtimes/osx-arm64/native/ : YES, 2026-11-15, with dav1d's COPYING
+                   beside it as LICENSE-Dav1d.txt; signature re-verified after the
+                   copy. Unstripped dylib + dSYM in ../unstripped/osx-arm64/.
+Replaces         : the 2026-08-29 15:58 UTC build (sha256 3d35c38606a5...82f2,
+                   LC_UUID 70E56A37-E2AB-304E-A4B2-C0C6EC4F3FE6; Apple clang's
+                   default plain -fstack-protector)
 
 
 ================================================================================
-osx-x64                                                            BUILT + PASSED
+osx-x64                                                  BUILT + PASSED (HARDENED)
 ================================================================================
-Built            : 2026-08-29 15:58 UTC
+Built            : 2026-11-15 18:02:48 UTC (2026-11-15 10:02 Pacific)
 Built by         : macos/build-osx-x64.sh (cross-compiled on the same Apple
                    Silicon Mac via macos/crossfile-x86_64.txt)
-Build host       : Apple Silicon Mac, macOS 26.5.1 (arm64) - no Intel Mac used
-Duration         : 24s
+Script fix       : the first run that day built cleanly but STOPPED, silently,
+                   in the gate right after the hardening check: no ___*_chk
+                   import exists in this slice (none in the 2026-08-29 one
+                   either), so the pipeline collecting them in
+                   macos/build-common.sh (step 3b) exited 1 and set -euo pipefail
+                   ended the script (the ERR trap is not inherited by functions,
+                   so nothing was printed). Fixed with `|| true` - "none" is a
+                   valid result there, as the comment beside it always said -
+                   and the script re-run from scratch; this entry is that run.
+Build host       : the same Mac as osx-arm64 above - no Intel Mac used
+Duration         : 28s
 Network          : not used - as osx-arm64 above
-Compiler         : Apple clang version 21.0.0 (clang-2100.1.1.101) -arch x86_64
-meson / ninja    : 1.12.0 / 1.13.2
-nasm             : NASM 3.02 (compiled 2026-06-29). A MAJOR version newer than
-                   the 2.15.03 used for linux-x64. It assembled dav1d's x86 SIMD
-                   without complaint and the result matches conformance, but it
-                   is the cause of the LC_UUID instability recorded below.
+Compiler         : Apple clang version 21.0.0 (clang-2100.4.1.1) -arch x86_64
+meson / ninja    : 1.12.1 / 1.13.2
+nasm             : NASM 3.02 (compiled 2026-06-29, Homebrew) - the same nasm as
+                   2026-08-29, and the cause of the LC_UUID instability below
 Rosetta 2        : present and used - the smoke test and the seven conformance
                    decodes ran the x86_64 CLI under it. Needed to VERIFY, not to
                    build.
+Source           : as osx-arm64 above
+c_args           : -fstack-protector-strong -D_FORTIFY_SOURCE=2
+Hardening        : ___stack_chk_fail imported (required, [ok]); fortified
+                   imports: none (as in the 2026-08-29 build - Apple's checked
+                   variants appear only where the compiler cannot prove a copy
+                   safe). ___stack_chk_fail call sites (otool -tvV) 49 -> 70.
 
 File             : libdav1d.dylib      install name @rpath/libdav1d.dylib
-Size (stripped)  : 1,679,264 bytes
-Size (unstripped): 2,438,496 bytes
-Size (gz staged) : 692,841 bytes
-SHA256           : a823a1bc794c46c4500117faf062495d77cb844906859e1c32246508347a3f27
-                   *** SEE Reproducibility BELOW - a rebuild may legitimately
-                   produce cb876e7513e4264337a5976302b8a07dc4e956fa2561140fd92b
-                   62ca52d11ee5 instead. Both are correct. ***
-SHA256 unstripped: ff18cfe1da5fba9b536f4f8853ff1dbfb52c1f776c03983ca6318db369a74177
-LC_UUID          : 134196EB-C570-3C80-AFAB-11581155E80C (NOT stable - see below)
-Deployment target: 11.0  (checked by the gate; the many `ld: warning: no platform
+Size (shipped)   : 1,750,448 bytes (stripped, install name set, ad-hoc signed).
+                   BUILD-INFO.txt says 1,736,600 - measured before the signature
+                   was added, as for osx-arm64
+Size (unstripped): 2,495,832 bytes
+Size (gz staged) : 716,540 bytes
+SHA256           : a32d9ab2aa808147f56e0f8cedcb35e5ea76cf3fc77a14cc638363ce6b429c9c
+                   *** ONE BUILD, NOT THE SOURCE - see Reproducibility below: a
+                   rebuild may legitimately differ in LC_UUID + signature. ***
+SHA256 unstripped: 45e7a98d4f68672d95e2670dbaafa0539272f5b0778308a91c42fbd84ca42550
+LC_UUID          : C60E7725-8746-3072-B1E1-2591D7F6C260 (equal in the shipped
+                   dylib, the stored unstripped one and the dSYM - they are the
+                   same build; NOT stable across rebuilds)
+Deployment target: 11.0  (checked by the gate; the 46 `ld: warning: no platform
                    load command found in ... .obj` messages during the link come
                    from nasm objects carrying no LC_BUILD_VERSION and do not
                    affect the finished dylib)
 Dependencies     : /usr/lib/libSystem.B.dylib only
+Exports          : the same 20 symbols as the 2026-08-29 build (17 required)
 Signature        : ad-hoc (codesign --sign -). Required explicitly here: unlike
                    arm64, the linker does NOT ad-hoc sign x86_64 output.
 SIMD present     : yes - 9,318 AVX2/AVX-512/SSE symbols in the unstripped binary
-Reproducibility  : NOT byte-identical. Six from-scratch runs alternated between
-                   the two sha256 values above, differing in exactly 76 bytes:
-                   the 16-byte LC_UUID at offset 1569-1584, and 60 bytes of the
-                   ad-hoc signature that covers it. All code and data identical;
-                   both variants pass the entire gate. Cause: nasm 3.02 varies
-                   whether it emits 19 FGData.* local debug symbols from the x86
-                   film-grain assembly's STRUCT macros. `strip -x` removes them
-                   either way, but ld64 derives the content-based LC_UUID from
-                   the pre-strip image. Full evidence in macos/README.txt.
+                   (the same count as 2026-08-29)
+Reproducibility  : not re-measured on 2026-11-15. On 2026-08-29 six from-scratch
+                   runs alternated between two sha256 values differing in exactly
+                   76 bytes (the 16-byte LC_UUID and 60 signature bytes covering
+                   it), all code and data identical: nasm 3.02 varies whether it
+                   emits 19 FGData.* local debug symbols, and ld64 derives the
+                   LC_UUID from the pre-strip image. Full evidence in
+                   macos/README.txt. Compare size and gate result, not the hash.
 Gate             : architecture ok, 17/17 exports, install name ok, system-only
-                   dependencies, minos 11.0 ok, signature ok, smoke test passed
-                   under Rosetta (API 7.0.0, decoder opened and closed), 7/7
-                   conformance decodes matched
-Adopted into runtimes/osx-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE-Dav1d.txt; signature re-verified after the copy
+                   dependencies, hardening ok, minos 11.0 ok, signature ok, smoke
+                   test passed under Rosetta (API 7.0.0, decoder opened and
+                   closed), 7/7 conformance decodes matched
+Managed proof    : NOT RUN - the Mac's .NET SDKs (10.0.404, 11.0.100) are arm64
+                   only and cannot load an x86_64 dylib
+Adopted into runtimes/osx-x64/native/ : YES, 2026-11-15, with dav1d's COPYING
+                   beside it as LICENSE-Dav1d.txt; signature re-verified after the
+                   copy. Unstripped dylib + dSYM from THIS build in
+                   ../unstripped/osx-x64/ (LC_UUID matched, above).
+Replaces         : the 2026-08-29 15:58 UTC build (sha256 a823a1bc794c...3f27,
+                   LC_UUID 134196EB-C570-3C80-AFAB-11581155E80C; Apple clang's
+                   default plain -fstack-protector)
 
 ================================================================================
 android-arm64 and android-x64 - HARDENED REBUILD, ADOPTED 2026-11-07

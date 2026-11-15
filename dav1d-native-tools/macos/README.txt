@@ -14,7 +14,24 @@ run both built clean and passed the full gate, and NO script needed fixing. The
   osx-arm64     : 5-7s,  798,304 bytes stripped, gate fully passed
   osx-x64       : ~24s, 1,679,264 bytes stripped, gate fully passed
 
-Two things that run taught us, both harmless but both surprising the first time
+HARDENED REBUILD, 2026-11-15 - both slices rebuilt with the hardening flags
+(pins.env DAV1D_HARDENING_DARWIN_C_ARGS) on the same Mac and adopted:
+
+  Build machine : macOS 27.2.1, Xcode 27.2, Apple clang 21.0.0 (clang-2100.4.1.1)
+  Tools         : meson 1.12.1, ninja 1.13.2, nasm 3.02, Rosetta 2 present
+  osx-arm64     : 7s, 810,224 bytes shipped, gate fully passed, byte-identical
+                  across two runs
+  osx-x64       : 28s, 1,750,448 bytes shipped, gate fully passed - after ONE
+                  script fix: build-common.sh's gate step 3b stopped the script
+                  silently when a slice has no fortified ___*_chk import (osx-x64
+                  has none), because grep's "no match" exit status tripped
+                  `set -euo pipefail`. Now `|| true`. See its BUILD-PROVENANCE
+                  entry.
+  (The scripts' "stripped" size is measured before install_name_tool and
+  codesign, so it is not the shipped size; the shipped sizes are above and in
+  ../BUILD-PROVENANCE.txt.)
+
+Two things the first run taught us, both harmless but both surprising the first time
 you see them - read WHAT HAS AND HAS NOT BEEN VERIFIED before worrying about
 either:
   * osx-x64 is NOT byte-reproducible. It alternates between two outputs that
@@ -184,7 +201,10 @@ that fails any check exits non-zero and must not be adopted.
      else. dav1d genuinely has no other dependencies, so anything else means
      something was linked that the user would have to install.
 
-  4b. Hardening - ADDED 2026-11-07 ON LINUX, UNRUN ON A MAC. Both scripts pass
+  4b. Hardening - ADDED 2026-11-07 ON LINUX, FIRST RUN ON THE MAC 2026-11-15
+     (osx-arm64 fortified: ___memcpy_chk; osx-x64: none - both valid; the
+     -strong level shows as more ___stack_chk_fail call sites in otool -tvV,
+     80 -> 102 and 49 -> 70). Both scripts pass
      -Dc_args='-fstack-protector-strong -D_FORTIFY_SOURCE=2' (pins.env,
      DAV1D_HARDENING_DARWIN_C_ARGS). `nm -u` must list ___stack_chk_fail; the
      ___*_chk fortified imports are listed for the record but not required,
@@ -382,7 +402,26 @@ ADOPTING A BUILT BINARY INTO THE PACKAGE
 
   5. Run the managed test suite before publishing.
 
-WHAT WAS ADOPTED ON 2026-08-29
+WHAT WAS ADOPTED ON 2026-11-15 (THE CURRENT FILES)
+--------------------------------------------------------------------------------
+The hardened rebuilds, copied exactly as described above and re-verified after
+the copy (byte-identical to output/, arch, install name, minos 11.0,
+`codesign -v` valid, LC_UUID equal across shipped dylib, unstripped dylib and
+.dSYM, licence == dav1d/COPYING):
+
+  src/CodeBrix.VideoPlayback.Dav1d/runtimes/osx-arm64/native/libdav1d.dylib
+      sha256 7f30710bcc3d57a1cb350336b95410db876e41cebf5b5176bd4368d28b6f1f15
+      810,224 bytes
+  src/CodeBrix.VideoPlayback.Dav1d/runtimes/osx-x64/native/libdav1d.dylib
+      sha256 a32d9ab2aa808147f56e0f8cedcb35e5ea76cf3fc77a14cc638363ce6b429c9c
+      1,750,448 bytes   (one build - see WHAT HAS AND HAS NOT BEEN VERIFIED)
+
+Their unstripped dylibs and .dSYM bundles from the same builds are in
+../unstripped/<rid>/. The managed suite passed against the osx-arm64 file
+(Debug and Release); there is no x64 .NET SDK on the Mac to run it for osx-x64.
+The section below is the earlier adoption, kept as the record of it.
+
+WHAT WAS ADOPTED ON 2026-08-29 (SUPERSEDED 2026-11-15)
 --------------------------------------------------------------------------------
 Both macOS slices are in the package tree as of 2026-08-29, copied exactly as
 described above and re-verified after the copy (arch, install name, minos 11.0,

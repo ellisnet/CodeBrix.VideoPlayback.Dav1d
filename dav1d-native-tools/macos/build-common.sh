@@ -7,6 +7,9 @@
 #   the full gate; no fix to this file was needed. See README.txt, "WHAT HAS AND HAS NOT BEEN
 #   VERIFIED", for what that run established and for the two known quirks (nasm 3.02 struct
 #   symbols, and the LC_UUID that makes osx-x64 not byte-reproducible).
+#   RUN AGAIN 2026-11-15 (hardened rebuild, macOS 27.2.1): ONE FIX here - the fortified-import
+#   listing in the gate's step 3b now ends in `|| true`, because with no ___*_chk import (osx-x64)
+#   it exited 1 and `set -euo pipefail` stopped the build silently. Both slices then passed.
 #
 # Sourced by build-osx-arm64.sh and build-osx-x64.sh; not meant to be run directly.
 # ==============================================================================================
@@ -84,7 +87,8 @@ dav1d_picture_unref
 # ----------------------------------------------------------------------------------------------
 # Hardening (pins.env, DAV1D_HARDENING_DARWIN_C_ARGS): -fstack-protector-strong and
 # -D_FORTIFY_SOURCE=2, passed to meson as one -Dc_args by both build scripts. ADDED 2026-11-07 on
-# Linux - UNRUN on a Mac. The variable is required, so a build cannot quietly come out without it.
+# Linux; FIRST RUN on the Mac 2026-11-15 (both slices adopted - see ../BUILD-PROVENANCE.txt). The
+# variable is required, so a build cannot quietly come out without it.
 # ----------------------------------------------------------------------------------------------
 : "${DAV1D_HARDENING_DARWIN_C_ARGS:?pins.env does not define DAV1D_HARDENING_DARWIN_C_ARGS}"
 
@@ -209,7 +213,10 @@ verify_dylib() {
     else
         gate_fail "hardening: ___stack_chk_fail is not imported - -fstack-protector-strong did not take effect"
     fi
-    FORTIFIED="$(printf '%s\n' "$imports" | grep -E '^___[a-z0-9_]+_chk$' | grep -v '^___stack_chk_fail$' | tr '\n' ' ' | sed 's/ *$//')"
+    # `|| true`: when there is no fortified import (osx-x64, 2026-11-15 - as in its 2026-08-29
+    # build), grep -v selects nothing and exits 1, which under `set -euo pipefail` killed the build
+    # here silently (the ERR trap is not inherited by functions). "none" is a valid result.
+    FORTIFIED="$(printf '%s\n' "$imports" | grep -E '^___[a-z0-9_]+_chk$' | grep -v '^___stack_chk_fail$' | tr '\n' ' ' | sed 's/ *$//' || true)"
     echo "  [info] fortified imports: ${FORTIFIED:-none}"
 
     # 4. Deployment target - CHECKED, not merely reported ---------------------------------------
