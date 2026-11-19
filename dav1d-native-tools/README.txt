@@ -67,8 +67,9 @@ FOLDER MAP
                           the exact copy command. Never edited - if a build ever
                           needs a change it goes in patches/
   patches/                local changes to the vendored source, applied at build
-                          time to a scratch copy. EMPTY as of 2026-08-28 -
-                          no patch is needed on any platform
+                          time to a scratch copy. ONE patch since 2026-11-19:
+                          001-msvc-1952-has-include-next.patch, which MSVC
+                          19.52 needs on Windows (no effect elsewhere)
   test-vectors/           six small AV1 streams and the decode hashes every
                           build must reproduce. Synthetic, generated here, NOT
                           third-party content - see its README.txt
@@ -126,7 +127,15 @@ and nothing else is needed.
       hardware cannot execute ARM64 code; it is pending verification on an ARM64
       machine. windows/README.txt records all of it, and note one finding that
       applies to any Windows build: win-x64 is NOT byte-reproducible, because
-      link.exe stamps a timestamp into the image. <<<
+      link.exe stamps a timestamp into the image.
+
+      HARDENED REBUILD, 2026-11-19: both Windows slices were rebuilt with the
+      2026-11-07 hardening flags (/GS /guard:cf) on the same x64 machine, now
+      Visual Studio 2026 18.12 / MSVC 19.52, and adopted - so all nine shipped
+      binaries now carry the hardening flags. MSVC 19.52 needed the first patch
+      in patches/ (Windows only). win-x64 passed the complete gate with Control
+      Flow Guard on; win-arm64 is again cross-built with its smoke test and
+      conformance decodes UNRUN pending ARM64 hardware. <<<
 
 
 THE NINE RUNTIME IDENTIFIERS

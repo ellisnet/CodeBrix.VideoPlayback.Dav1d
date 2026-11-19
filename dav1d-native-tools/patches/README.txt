@@ -2,8 +2,20 @@
 dav1d-native-tools/patches - local changes to the vendored dav1d source
 ================================================================================
 
-AS OF 2026-08-28 THIS FOLDER IS EMPTY. No patch is needed on any platform; the
-vendored snapshot in ../dav1d/ builds as-is for all seven runtime identifiers.
+AS OF 2026-11-19 THIS FOLDER HOLDS ONE PATCH:
+
+  001-msvc-1952-has-include-next.patch
+      Windows only in effect. MSVC 19.52 (Visual Studio 2026 18.12) rejects
+      include/compat/msvc/stdatomic.h's
+          #if defined(__clang__) && __has_include_next(<stdatomic.h>)
+      with C7780 + C1017; the patch nests the test, keeping upstream's branch
+      choice. First applied to the win-x64 and win-arm64 builds of 2026-11-19.
+      The file's own header says what it fixes, the upstream status and when
+      it can be dropped.
+
+Until then (2026-08-28 to 2026-11-18) the folder was empty and the vendored
+snapshot in ../dav1d/ built as-is for every runtime identifier; it still does
+for everything except MSVC 19.52 and later.
 
 WHY THE FOLDER EXISTS ANYWAY
 --------------------------------------------------------------------------------

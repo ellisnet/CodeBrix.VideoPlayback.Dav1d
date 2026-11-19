@@ -20,18 +20,39 @@ executed before that day.
 
   -Route Native (build on an ARM64 Windows machine) has STILL never been run.
 
-  HARDENING - ADDED 2026-11-07 ON LINUX, UNRUN ON WINDOWS. Every build now
+  HARDENED REBUILD: 2026-11-19, the same x64 machine, now Visual Studio
+  Professional 2026 18.12.1 (MSVC 19.52.37029, clang-cl 22.1.3). Every build
   passes /GS /guard:cf to the compiler and /guard:cf to the linker (pins.env,
   DAV1D_HARDENING_MSVC_*), and the gate checks the result - see item 4 of THE
-  VERIFICATION GATE. The DLLs shipped today predate this and have Control Flow
-  Guard OFF (read with llvm-readobj: /GS's security cookie is present, the
-  GUARD_CF characteristic is not). One thing to watch on the first hardened
-  run: dav1d's x86 and ARM64 assembly carries no CFG metadata of its own and
-  is reached through function pointers. The linkers are understood to treat
-  the functions of objects without that metadata as valid indirect-call
-  targets, so this is expected to work - but if a conformance decode dies with
-  no output and exit code 0xC0000409 (a fail-fast), suspect Control Flow Guard
-  first, and report it rather than dropping the flag.
+  VERIFICATION GATE. Both scripts ran unchanged and the hardening gate passed
+  on both DLLs (GUARD_CF set, security cookie present); both were adopted.
+
+  win-x64     PASSED THE COMPLETE GATE WITH CONTROL FLOW GUARD ON, all seven
+              conformance decodes included. dav1d's x86 assembly carries no CFG
+              metadata of its own and is reached through function pointers;
+              the decodes ran through it and matched, with no fail-fast, so the
+              linker does treat those functions as valid indirect-call targets.
+              The managed suite passed against it too.
+
+  win-arm64   CROSS-BUILT again; smoke test and conformance decodes UNRUN, as
+              before. The CFG question above is still open for the AArch64
+              assembly: if a decode on ARM64 hardware dies with no output and
+              exit code 0xC0000409 (a fail-fast), suspect Control Flow Guard
+              first, and report it rather than dropping the flag.
+
+  TWO THINGS THE 2026-11-19 RUN NEEDED, neither of them a script change:
+    * patches/001-msvc-1952-has-include-next.patch. MSVC 19.52 turned the
+      undefined __has_include_next(...) in dav1d's
+      include/compat/msvc/stdatomic.h from warning C4067 into error C7780 +
+      C1017, so win-x64 did not compile at all without it. The patch keeps
+      upstream's branch choice; see its header.
+    * C:\Strawberry\c\bin OFF THE PATH. Strawberry Perl's MinGW folder holds a
+      ccache.exe, and meson automatically wraps the compiler with any ccache
+      it finds on PATH ("C compiler for the host machine:
+      C:\Strawberry\c\bin\ccache.exe cl"). The build was run with that folder
+      removed from PATH; its cmake, ninja and nasm (2.16.01) are older than the
+      ones these builds use, too. dav1d needs no Perl, so nothing of
+      Strawberry's is needed here.
 
 Four things needed fixing on that first run. All four fixes are in this folder
 and are described in WHAT THE FIRST REAL RUN ESTABLISHED. Three of them are
@@ -266,8 +287,9 @@ that fails any check exits non-zero and must not be adopted.
   4. Hardening - dumpbin /headers must list the "Control Flow Guard" DLL
      characteristic (set only when /guard:cf reached the LINKER, not just the
      compiler), and dumpbin /loadconfig must show a "Security Cookie" (/GS).
-     The guard CF function count is printed for the record. UNRUN on Windows
-     as of 2026-11-07. The same facts can be read on Linux with the NDK's
+     The guard CF function count is printed for the record. FIRST RUN on
+     Windows 2026-11-19: passed on both DLLs (guard CF function count 0x871 for
+     win-x64, 0x40D for win-arm64). The same facts can be read on Linux with the NDK's
      llvm-readobj --file-headers --coff-load-config dav1d.dll
      (IMAGE_DLL_CHARACTERISTICS_GUARD_CF, SecurityCookie, GuardCFFunctionCount).
 

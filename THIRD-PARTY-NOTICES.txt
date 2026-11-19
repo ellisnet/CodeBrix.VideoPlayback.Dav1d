@@ -41,9 +41,19 @@ WHAT WAS MODIFIED
     existing one: dav1d-native-tools/dav1d/UPSTREAM.txt, which records where the
     snapshot came from. dav1d-native-tools/patches/ exists for the day a build
     needs a source change - applied at build time to a scratch copy, never to
-    the snapshot - and as of 2026-08-28 it is empty. If a patch is ever added,
-    this section must say so, because a patched binary is no longer plain
-    upstream dav1d.
+    the snapshot. Since 2026-11-19 it holds ONE patch, so the two Windows
+    binaries are no longer built from plain upstream dav1d:
+
+      001-msvc-1952-has-include-next.patch
+          changes include/compat/msvc/stdatomic.h (a dav1d file, BSD-2-Clause,
+          VideoLAN and dav1d authors), which only MSVC-syntax Windows builds
+          compile. It splits the preprocessor test
+              #if defined(__clang__) && __has_include_next(<stdatomic.h>)
+          into a nested #if, because MSVC 19.52 rejects the undefined
+          function-like macro even behind a false &&. The branch selected is
+          the same as upstream's on every compiler. Applies to win-x64 and
+          win-arm64; the Linux, macOS and Android binaries do not compile the
+          file.
 
 WHAT IS NOT THIRD-PARTY, AND IS DELIBERATELY ABSENT FROM THIS FILE
     dav1d-native-tools/test-vectors/*.ivf - the six AV1 conformance streams the
@@ -135,7 +145,10 @@ WHAT IS PRESENT IN THE SNAPSHOT BUT NOT COMPILED INTO ANY SHIPPED BINARY
       3 and 4 below.
 
 MODIFICATIONS
-    None. See "WHAT WAS MODIFIED" above.
+    One build-time patch, for the Windows binaries only:
+    dav1d-native-tools/patches/001-msvc-1952-has-include-next.patch (a
+    preprocessor-only change to include/compat/msvc/stdatomic.h). The vendored
+    snapshot itself is unmodified. See "WHAT WAS MODIFIED" above.
 
 ----- dav1d licence (BSD-2-Clause), reproduced verbatim from COPYING -----
 

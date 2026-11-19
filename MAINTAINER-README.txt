@@ -607,7 +607,7 @@ WHAT REMAINS TO BE VERIFIED ON DESKTOP, AND WHERE
 The suite below - the conformance hashes, the zero-copy path, the release
 threads, the back-pressure loop, the probe, the 10-bit path, the frame-size
 guard, the library resolver, the API version guard, and whole-file playback -
-has been verified on TWO platforms so far:
+has been verified on THREE platforms so far:
 
     linux-x64       the original platform.
     osx-arm64       VERIFIED 2026-09-05 on macOS 26.5.1, Apple Silicon, .NET SDK
@@ -624,6 +624,16 @@ has been verified on TWO platforms so far:
                       * THE INSTALL NAME. otool -D on the shipped dylib prints
                         @rpath/libdav1d.dylib, for osx-x64 as well as osx-arm64,
                         so install_name_tool -id did its job on both.
+    win-x64         VERIFIED 2026-11-19 on Windows 11 Pro 10.0.26300 x64, .NET
+                    SDK 11.0.100 running the net10.0 test host, against the
+                    hardened dav1d.dll adopted that day (sha256 8f50cf07...3473,
+                    checked in the test output). `dotnet test --project
+                    tests/CodeBrix.VideoPlayback.Dav1d.Tests` in Debug and
+                    Release: 127 tests, 126 passed, 0 failed, and the single
+                    documented skip (the opt-in audible playback test). The
+                    runner reported net10.0|x64. The static CRT is confirmed by
+                    the gate: the DLL imports KERNEL32.dll and nothing else, so
+                    no Visual C++ Redistributable is needed.
 
 Per §6.5 of the programme plan, each remaining device must run the SAME suite -
 it is the per-RID verification, not a smoke test - and record the result:
@@ -637,10 +647,10 @@ it is the per-RID verification, not a smoke test - and record the result:
                     8.0.401 / runtime 8.0.8, and this project targets net10.0.
                     Install an x64 .NET 10 runtime and the suite can be run
                     there with `arch -x86_64`. Rosetta itself is present.
-    win-x64         a Windows x64 box. Also the place to check that
-                    -Db_vscrt=static_from_buildtype really removed the need for a
-                    VC redistributable.
-    win-arm64       a Windows ARM64 box.
+    win-arm64       a Windows ARM64 box. Its 2026-11-19 hardened DLL has never
+                    been executed (cross-built); this run is also the first
+                    execution of dav1d's AArch64 assembly under Control Flow
+                    Guard.
 
 Two things to watch for specifically on the platforms not yet run:
 

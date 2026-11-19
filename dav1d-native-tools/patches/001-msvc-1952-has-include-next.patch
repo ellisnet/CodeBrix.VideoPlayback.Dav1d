@@ -1,0 +1,63 @@
+001-msvc-1952-has-include-next.patch
+================================================================================
+WHAT IT FIXES
+  include/compat/msvc/stdatomic.h line 35 reads
+
+      #if defined(__clang__) && __has_include_next(<stdatomic.h>)
+
+  MSVC 19.51 (the 2026-08-29 Windows builds) let the false defined(__clang__)
+  short-circuit the undefined __has_include_next(...) with warning C4067, which
+  the header disables. MSVC 19.52 (Visual Studio 2026 18.12, toolset
+  14.52.37025, first used 2026-11-18) makes it a hard error:
+
+      error C7780: function-like macro '__has_include_next' is not defined
+      fatal error C1017: invalid integer constant expression
+
+  so every dav1d source that includes <stdatomic.h> fails to compile for
+  win-x64. The patch nests the clang-only test so that cl never evaluates
+  __has_include_next, and selects exactly the same branch as upstream on every
+  compiler: cl -> the header's own Interlocked* atomics (unchanged); clang-cl
+  (win-arm64) -> clang's <stdatomic.h> through #include_next (unchanged).
+
+WHICH PLATFORMS IT AFFECTS
+  Windows only. meson.build adds include/compat/msvc to the include path only
+  when cc.get_id() == 'msvc', so the patched header is never compiled on Linux,
+  macOS or Android. Those scripts still apply the patch to their scratch copy
+  (they apply every patch in this folder) and record it in BUILD-INFO; their
+  object code is unaffected.
+
+UPSTREAM
+  Not reported upstream as of 2026-11-18. The header is unchanged at the
+  vendored commit 52b9d3d3 (1.5.4-1).
+
+WHEN IT CAN BE DROPPED
+  When the vendored snapshot is bumped to a dav1d whose
+  include/compat/msvc/stdatomic.h no longer evaluates __has_include_next in an
+  #if that cl reads. Re-check by building win-x64 without this patch.
+
+APPLIES WITH
+  git apply -p1 (windows/build-common.ps1, against the CRLF working copy) and
+  patch -p1 --forward --batch (linux/, macos/, against LF); both verified on
+  2026-11-18. Everything above the "diff --git" line is ignored by both tools.
+================================================================================
+
+diff --git a/include/compat/msvc/stdatomic.h b/include/compat/msvc/stdatomic.h
+index 618f0ee..57d53bd 100644
+--- a/include/compat/msvc/stdatomic.h
++++ b/include/compat/msvc/stdatomic.h
+@@ -32,7 +32,14 @@
+ #pragma warning(push)
+ #pragma warning(disable:4067)    /* newline for __has_include_next */
+ 
+-#if defined(__clang__) && __has_include_next(<stdatomic.h>)
++/* CodeBrix patch 001: MSVC 19.52 rejects an undefined function-like macro in #if even
++ * behind a false '&&', so the clang-only test is nested. Same branches as upstream. */
++#if defined(__clang__)
++#  if __has_include_next(<stdatomic.h>)
++#    define DAV1D_MSVC_COMPAT_USE_CLANG_STDATOMIC 1
++#  endif
++#endif
++#if defined(DAV1D_MSVC_COMPAT_USE_CLANG_STDATOMIC)
+    /* use the clang stdatomic.h with clang-cl*/
+ #  include_next <stdatomic.h>
+ #else /* ! stdatomic.h */

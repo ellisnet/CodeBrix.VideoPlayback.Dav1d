@@ -19,7 +19,16 @@ Common to every entry below
   API version     : 7.0.0  -> Linux soname libdav1d.so.7; Android libdav1d.so
   Licence         : BSD-2-Clause (dav1d/COPYING, shipped as LICENSE-Dav1d.txt beside every
                     binary; see ../THIRD-PARTY-NOTICES.txt)
-  Patches applied : NONE. The vendored source is unmodified upstream.
+  Patches applied : the vendored source in dav1d/ is unmodified upstream. ONE
+                    patch exists since 2026-11-19 -
+                    patches/001-msvc-1952-has-include-next.patch, needed by MSVC
+                    19.52 (Visual Studio 2026 18.12) on Windows. It changes only
+                    include/compat/msvc/stdatomic.h, which only MSVC-syntax
+                    Windows builds compile. The win-* entries below were built
+                    with it; every entry built before 2026-11-19 (linux-*,
+                    android-*, osx-*) predates it and was built from the
+                    unpatched tree - which is the same code for those platforms,
+                    since none of them compiles that header.
   meson options   : --buildtype=release -Ddefault_library=shared -Dbitdepths=8,16
                     -Denable_asm=true -Denable_tools=true -Denable_tests=false
                     -Denable_examples=false -Dxxhash_muxer=disabled
@@ -115,9 +124,11 @@ WHICH SHIPPED BINARIES CARRY THE FLAGS
                  osx-x64 needed a one-line gate fix in macos/build-common.sh,
                  recorded in its entry)
   win-x64, win-arm64
-                 NOT YET - their entries below are the earlier, unhardened
-                 builds. Each is replaced, and this list updated, when it is
-                 rebuilt with the current scripts.
+                 YES - rebuilt on Jeremy's x64 Windows machine and adopted
+                 2026-11-19 (entries below; MSVC 19.52 needed patches/001).
+                 win-x64 passed the complete gate, conformance included, with
+                 Control Flow Guard on; win-arm64 was cross-built and its smoke
+                 test and conformance decodes are still UNRUN on ARM64 hardware.
 
 
 ================================================================================
@@ -270,79 +281,109 @@ Adopted into runtimes/linux-riscv64/native/ : YES, 2026-11-07, with dav1d's
 Replaces         : the 2026-08-29 unhardened build, sha256 6fc64b836cfb245225030c564dabebea94899fb2811ab7ca1bb31535e83ea118
 
 
-win-x64                                                            BUILT + PASSED
+win-x64                                                  BUILT + PASSED (HARDENED)
 ================================================================================
-Built            : 2026-08-29 17:13 UTC
-Built by         : windows\build-win-x64.ps1
-Build host       : Windows 11 Pro 10.0.26200 (AMD64), Visual Studio Professional
-                   2026 (18.9.12120.119). First execution of these scripts on
-                   any Windows machine.
-Duration         : 28s
+Built            : 2026-11-19 05:19:00 UTC
+Built by         : windows\build-win-x64.ps1 - script unchanged
+Build host       : Windows 11 Pro 10.0.26300 (AMD64), Visual Studio Professional
+                   2026 18.12.1 (18.12.12412.261) - Jeremy's x64 desktop
+Duration         : 29s
 Network          : not used - the vendored source, the conformance streams and
                    the expected hashes are all in this repository
-Compiler         : cl 19.51.36256 (MSVC toolset 14.51.36231), link 14.51.36256.0
-meson / ninja    : 1.12.0 / 1.13.0
-nasm             : NASM 3.02 (compiled 2026-06-28) - the same major version used
-                   for osx-x64, and newer than the 2.15.03 used for linux-x64.
-                   Assembled dav1d's x86 SIMD without complaint.
+Compiler         : cl 19.52.37029 (MSVC toolset 14.52.37025), link 14.52.37029.0
+meson / ninja    : 1.12.0 / 1.13.2 (the pip wheel, "1.13.2.git.kitware.jobserver-
+                   pipe-1"; pins.env pins 1.13.0 - the script reports the
+                   difference and does not enforce it; nothing in the build
+                   depends on the patch-level change)
+nasm             : NASM 3.02 (compiled 2026-06-28), as for the 2026-08-29 build
 Windows SDK      : 10.0.26100
 CRT              : static (-Db_vscrt=static_from_buildtype), so no Visual C++
                    Redistributable is required on a user's machine
+Patches applied  : 001-msvc-1952-has-include-next.patch - REQUIRED with this
+                   compiler: MSVC 19.52 makes the undefined __has_include_next(...)
+                   in include/compat/msvc/stdatomic.h a hard error (C7780 + C1017)
+                   where 19.51 only warned. The patch selects exactly the branch
+                   upstream does (cl: the header's own Interlocked* atomics) - see
+                   patches/001-msvc-1952-has-include-next.patch
+Hardening        : c_args /GS /guard:cf, c_link_args /guard:cf (pins.env
+                   DAV1D_HARDENING_MSVC_*). Gate: Control Flow Guard DLL
+                   characteristic SET, security cookie present in the load
+                   configuration, guard CF function count 0x871. dav1d's x86
+                   assembly carries no CFG metadata of its own; all seven
+                   conformance decodes ran through it with CFG on and matched -
+                   no fail-fast (0xC0000409)
+Build PATH       : the registry Machine + User PATH with C:\Strawberry\c\bin
+                   removed - on the first attempt meson found Strawberry's
+                   ccache.exe there and wrapped cl with it. Strawberry's
+                   MinGW folder must not be ahead of (or, for meson, anywhere on)
+                   the PATH of a Windows build
 
 File             : dav1d.dll
-Size             : 2,002,432 bytes
-SHA256           : 69c3e076a4990560e00e1bfc04b2bac111c96965ad39da2ea0d2ed5eeca4da10
-                   *** NOT REPRODUCIBLE - see Reproducibility above. A rebuild
-                   legitimately produces a different hash, differing in the four
-                   timestamp-derived bytes only. ***
+Size             : 2,017,792 bytes
+SHA256           : 8f50cf07511bea7df471c6d8ec32260ad60bac78a70c2868bb9dcbdc37003473
+                   *** NOT REPRODUCIBLE - see Reproducibility above. ***
 Debug symbols    : none. --buildtype=release asks for no debug info, so MSVC
                    emitted no .pdb.
 Dependents       : KERNEL32.dll only - no VC runtime, as required
 Gate             : architecture ok (8664/x64), 17/17 exports, system-only
-                   dependencies, LoadLibrary smoke test passed (API 7.0.0,
+                   dependencies, hardening ok (GUARD_CF + /GS cookie),
+                   LoadLibrary smoke test passed (API 7.0.0, frame delay 5,
                    decoder opened and closed), 7/7 conformance decodes matched
-Adopted into runtimes/win-x64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE-Dav1d.txt
-
-Note             : the conformance step failed on the very first attempt for a
-                   reason that had nothing to do with this binary - the CLI was
-                   loading an unrelated dav1d.dll (GStreamer's, API 6.8.0) from
-                   PATH and dying with 0xC0000139 before it decoded anything.
-                   build-common.ps1 now copies the staged DLL beside the CLI so
-                   that cannot happen. windows/README.txt, "THE PATH TRAP".
+Managed suite    : dotnet test --project tests/CodeBrix.VideoPlayback.Dav1d.Tests
+                   in Debug AND Release on the build host: 127 tests, 126
+                   passed, 0 failed, 1 skipped (the opt-in audible-playback test,
+                   CODEBRIX_AUDIO_RUN_PLAYBACK_TESTS unset), against this exact
+                   file (the copies under the test output's
+                   runtimes/win-x64/native/ checked by sha256), 2026-11-19 UTC
+Adopted into runtimes/win-x64/native/ : YES, 2026-11-19, with dav1d's COPYING
+                   beside it as LICENSE-Dav1d.txt (unchanged)
+Replaces         : the 2026-08-29 17:13 UTC unhardened build (cl 19.51.36256,
+                   2,002,432 bytes, sha256
+                   69c3e076a4990560e00e1bfc04b2bac111c96965ad39da2ea0d2ed5eeca4da10;
+                   /GS cookie present, Control Flow Guard OFF). That first run
+                   also established THE PATH TRAP (windows/README.txt):
+                   build-common.ps1 copies the staged DLL beside the CLI so an
+                   unrelated dav1d.dll on PATH (GStreamer's) cannot be loaded.
 
 
 ================================================================================
-win-arm64                                        BUILT - GATE INCOMPLETE, PENDING
+win-arm64                              BUILT (HARDENED) - GATE INCOMPLETE, PENDING
 ================================================================================
 *** THIS ENTRY DOES NOT CLAIM A PASS. The binary was cross-built on x64 hardware
-*** and has NEVER BEEN EXECUTED. Three of the five gate checks ran and passed;
+*** and has NEVER BEEN EXECUTED. Four of the six gate checks ran and passed;
 *** the two that require running ARM64 code did not run at all. Unrun is not
 *** passed. Finish the gate on an ARM64 Windows machine and rewrite this entry
 *** with the result - windows/README.txt, "FINISHING A CROSS-BUILT win-arm64 ON
 *** ARM64 HARDWARE".
 
-Built            : 2026-08-29 17:11 UTC
-Built by         : windows\build-win-arm64.ps1   (route: CrossFromX64)
-Build host       : Windows 11 Pro 10.0.26200 (AMD64) - an x64 machine, NOT
-                   ARM64. Visual Studio Professional 2026 (18.9.12120.119).
-Duration         : 15s
+Built            : 2026-11-19 05:19:44 UTC
+Built by         : windows\build-win-arm64.ps1 -Route CrossFromX64 - script
+                   unchanged
+Build host       : Windows 11 Pro 10.0.26300 (AMD64) - an x64 machine, NOT
+                   ARM64. Visual Studio Professional 2026 18.12.1 (18.12.12412.261).
+Duration         : 19s
 Network          : not used
 Compiler         : clang-cl 22.1.3 (Visual Studio's "C++ Clang tools for
                    Windows"), targeting aarch64-pc-windows-msvc; linker
                    lld-link 22.1.3
-meson / ninja    : 1.12.0 / 1.13.0
+meson / ninja    : 1.12.0 / 1.13.2 (see win-x64)
 nasm             : not used (x86 only)
 Windows SDK      : 10.0.26100
 AArch64 assembly : assembled by clang-cl directly. gas-preprocessor.pl and Perl
-                   were not involved, which was the point of choosing clang-cl.
-SIMD detected    : DOTPROD, I8MM, SVE and SVE2 all compiled, so the binary
-                   carries the full SIMD set rather than a baseline subset.
+                   were not involved.
+SIMD detected    : DOTPROD, I8MM, SVE and SVE2 all compiled, as before.
 CRT              : static (-Db_vscrt=static_from_buildtype)
+Patches applied  : 001-msvc-1952-has-include-next.patch (applied to every
+                   Windows build; under clang-cl it selects clang's own
+                   <stdatomic.h>, exactly as the unpatched header did)
+Hardening        : c_args --target=aarch64-pc-windows-msvc /GS /guard:cf,
+                   c_link_args /guard:cf. Gate: Control Flow Guard DLL
+                   characteristic SET, security cookie present, guard CF
+                   function count 0x40D
 
 File             : dav1d.dll
-Size             : 902,656 bytes
-SHA256           : 8bf89bcb9cea3b38d7348b5f615caa012d91ba6c796244bc85259106ddb55c51
+Size             : 915,456 bytes
+SHA256           : 29a77d619b0fa347b1b43fec2d2cdc28bdac07d592838cfa66ea1a916a145e06
                    *** NOT REPRODUCIBLE - see Reproducibility above. ***
 Debug symbols    : none, as for win-x64
 Dependents       : KERNEL32.dll only - no VC runtime, as required
@@ -351,22 +392,34 @@ Gate             : RAN AND PASSED
                      - architecture ok (AA64/ARM64)
                      - 17/17 required exports present
                      - dependencies system-only (KERNEL32.dll)
+                     - hardening (GUARD_CF + /GS cookie)
                    DID NOT RUN - an x64 host cannot execute ARM64 code
                      - LoadLibrary smoke test
                      - 7 conformance decodes
                    The script exits 1 for this reason and that is its designed
                    behaviour on the cross route, not a failure of the binary.
+                   When it is run on hardware, watch for a decode that dies with
+                   no output and exit code 0xC0000409: that would be Control Flow
+                   Guard and dav1d's AArch64 assembly (windows/README.txt, STATUS)
 
-To finish it     : output/staging/win-arm64/win-arm64-gate.zip holds this DLL and
-                   the ARM64 dav1d.exe built from the same source, which is what
-                   the conformance decodes need. Carry it to ARM64 hardware and
-                   follow windows/README.txt.
+To finish it     : output/staging/win-arm64/win-arm64-gate.zip (576,048 bytes,
+                   2026-11-19) holds this DLL and the ARM64 dav1d.exe built from
+                   the same source (output/win-arm64/dav1d.exe, sha256
+                   20be9f054b775b55c91a2f06822e9a112c8603aa182d2d84e616cca75d252c5f),
+                   which is what the conformance decodes need. Carry it to ARM64
+                   hardware and follow windows/README.txt.
 
-Adopted into runtimes/win-arm64/native/ : YES, 2026-08-29, with dav1d's COPYING
-                   beside it as LICENSE-Dav1d.txt - ADOPTED WITH THE GATE INCOMPLETE, as a
-                   deliberate decision, so the package has an ARM64 slice while
-                   verification is outstanding. If the checks fail on hardware,
-                   this binary must be pulled from runtimes/.
+Adopted into runtimes/win-arm64/native/ : YES, 2026-11-19, with dav1d's COPYING
+                   beside it as LICENSE-Dav1d.txt - ADOPTED WITH THE GATE
+                   INCOMPLETE, the same deliberate decision as for the 2026-08-29
+                   build, so the package keeps an ARM64 slice while verification
+                   is outstanding. If the checks fail on hardware, this binary
+                   must be pulled from runtimes/.
+Replaces         : the 2026-08-29 17:11 UTC unhardened cross build (902,656
+                   bytes, sha256
+                   8bf89bcb9cea3b38d7348b5f615caa012d91ba6c796244bc85259106ddb55c51;
+                   Control Flow Guard OFF), whose gate was likewise never
+                   finished on ARM64 hardware.
 
 
 ================================================================================
